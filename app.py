@@ -13,15 +13,18 @@ st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
 
 # 2. CONFIGURACIÓN DEL DOCUMENTO
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
-
-# NOMBRES DE TUS HOJAS (Asegúrate que coincidan exactamente con tu Excel)
-MIS_HOJAS = ["S1 Enero", "S2 Enero", "S3 Enero", "S1 Febrero"] 
+# Lista de tus hojas actuales
+MIS_HOJAS = ["S1 Enero", "S2 Enero", "S3 Enero", "S4 Enero"] 
 
 @st.cache_data
 def cargar_datos(nombre_hoja):
     url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={quote(nombre_hoja)}"
     data = pd.read_csv(url)
+    # Limpiamos nombres de columnas
     data.columns = [str(col).strip() for col in data.columns]
+    # Creamos una columna de Nombre Completo para el buscador
+    if 'NOMBRE' in data.columns and 'PATERNO' in data.columns:
+        data['ALUMNO_COMPLETO'] = data['NOMBRE'].astype(str) + " " + data['PATERNO'].astype(str)
     return data
 
 try:
@@ -38,30 +41,34 @@ try:
     st.subheader(f"📍 Registro: {hoja_sel}")
     st.markdown("---")
 
-    # 3. BUSCADOR POR MATRÍCULA
-    matricula_input = st.text_input("Ingresa la matrícula del alumno:", placeholder="Ej. 18066902")
+    # 3. SELECCIÓN POR NOMBRE (En lugar de Matrícula)
+    if 'ALUMNO_COMPLETO' in df.columns:
+        # Ordenamos los nombres alfabéticamente
+        nombres_lista = sorted(df['ALUMNO_COMPLETO'].unique())
+        nombre_seleccionado = st.selectbox(
+            "Selecciona el nombre del alumno:", 
+            options=["-- Selecciona un nombre --"] + nombres_lista
+        )
 
-    if matricula_input:
-        col_mat = [c for c in df.columns if "MATRICULA" in c.upper()]
-        
-        if col_mat:
-            df['MAT_BUSCAR'] = df[col_mat[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
-            fila = df[df['MAT_BUSCAR'] == matricula_input.strip()]
+        if nombre_seleccionado != "-- Selecciona un nombre --":
+            fila = df[df['ALUMNO_COMPLETO'] == nombre_seleccionado]
 
             if not fila.empty:
-                datos = fila.iloc[0]
-                nombre_completo = f"{datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}"
-                st.success(f"Alumno: **{nombre_completo}**")
+                st.success(f"Reporte encontrado para: **{nombre_seleccionado}**")
                 
-                # 4. TABLA DE RESULTADOS
-                resumen = fila.drop(columns=['MAT_BUSCAR']).T
+                # 4. PREPARAR TABLA DE RESULTADOS
+                # Quitamos las columnas de control interno para la tabla final
+                columnas_a_quitar = ['ALUMNO_COMPLETO', 'MAT_STR', 'MATRICULA_STR']
+                alumno_final = fila.drop(columns=[c for c in columnas_a_quitar if c in fila.columns])
+                
+                resumen = alumno_final.T
                 resumen.columns = ["Estado"]
 
-                # 5. FUNCIÓN DE FORMATO CON REDONDEO PARA CALIFICACIÓN
+                # 5. FUNCIÓN DE FORMATO (Iconos y Redondeo)
                 def formatear(val, nombre_fila):
                     v_str = str(val).upper().strip()
                     
-                    # Lógica para Calificación Semanal (1 decimal)
+                    # Calificación Semanal con 1 decimal
                     if "CALIFICACIÓN SEMANAL" in str(nombre_fila).upper():
                         try:
                             numero = float(val)
@@ -69,29 +76,25 @@ try:
                         except:
                             return val, ''
 
-                    # Lógica para Pendientes/Completados
+                    # Iconos para tareas
                     if v_str in ['0', '0.0', 'FALSE', 'FALSO', 'NAN']:
                         return "❌ Pendiente", 'background-color: #ffcccc; color: #990000; font-weight: bold;'
                     if v_str in ['1', '1.0', 'TRUE', 'VERDADERO']:
                         return "✅ Completado", 'background-color: #ccffcc; color: #006600;'
                     
-                    # Quitar el .0 a números que no son calificación (ej. Matrícula)
                     return str(val).replace('.0', ''), ''
 
                 tabla_final = resumen.copy()
                 estilos = []
                 
-                # Recorremos la tabla usando el nombre de la fila para saber si es la calificación
                 for nombre_fila, row in resumen.iterrows():
                     texto, css = formatear(row["Estado"], nombre_fila)
                     tabla_final.at[nombre_fila, "Estado"] = texto
                     estilos.append(css)
 
                 st.table(tabla_final.style.apply(lambda x: estilos, axis=0))
-            else:
-                st.error("No se encontró esa matrícula en esta hoja.")
-        else:
-            st.error("Error: No se encontró la columna 'MATRICULA'.")
+    else:
+        st.error("No se encontraron las columnas 'NOMBRE' y 'PATERNO' en esta hoja.")
 
 except Exception as e:
-    st.error(f"Error al cargar la hoja: {e}")
+    st.error(f"Error al cargar los datos: {e}")
