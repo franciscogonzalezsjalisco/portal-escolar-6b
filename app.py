@@ -62,7 +62,7 @@ try:
                 st.success(f"Información de: **{nombre}**")
                 
                 # 4. TABLA DE RESULTADOS
-                columnas_a_omitir = ['NOMBRE', 'PATERNO', 'MATRICULA', 'MAT_BUSCAR', 'ALUMNO_COMPLETO']
+                columnas_a_omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'MAT_BUSCAR', 'ALUMNO_COMPLETO']
                 alumno_tabla = fila.drop(columns=[c for c in columnas_a_omitir if c in fila.columns])
                 
                 resumen = alumno_tabla.T
