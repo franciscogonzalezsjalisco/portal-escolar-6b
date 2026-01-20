@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import requests
 import time
-import re
 from urllib.parse import quote
 
 # 1. CONFIGURACIÓN INICIAL
@@ -10,41 +9,34 @@ st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
 
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
 
-# --- FUNCIÓN: BITÁCORA DE CONSULTAS (Invisible para el usuario) ---
+# --- FUNCIÓN: DETECTAR HOJAS (MÉTODO ROBUSTO) ---
+@st.cache_data(ttl=300)
+def obtener_nombres_hojas(sheet_id):
+    # Usamos el endpoint de exportación a Excel para leer los nombres de las pestañas
+    # Este método es mucho más estable que leer el HTML
+    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=xlsx"
+    try:
+        # Leemos el archivo temporalmente solo para extraer los nombres de las hojas
+        xls = pd.ExcelFile(url)
+        return xls.sheet_names
+    except Exception as e:
+        st.error(f"Error al detectar pestañas: {e}")
+        return ["S1 Enero"] # Valor por defecto si algo falla
+
+# --- FUNCIÓN: BITÁCORA DE CONSULTAS ---
 def registrar_consulta_bitacora(matricula, hoja):
-    # URL corregida basada en tu código fuente
-    FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSe-0hVl_zC9W7f3pBwYn6p1_v-z-qZ-B-w-Z-fQ/formResponse"
-    
-    # Payload con los IDs específicos de tu formulario
+    # URL de envío de tu formulario
+    FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfBv6p1-S-zL3Q6X_mF-nS_W7fXG8-b-K_V-z-qZ-B-w-Z-fQ/formResponse"
     payload = {
-        "entry.1768815482": str(matricula), 
+        "entry.1768815482": str(matricula),
         "entry.499470000": str(hoja)
     }
-    
     try:
-        # Enviamos con un 'timeout' para que no trabe la página si Google tarda
         requests.post(FORM_URL, data=payload, timeout=5)
-    except Exception as e:
-        print(f"Error silencioso en bitácora: {e}")
-
-# --- FUNCIÓN: DETECTAR HOJAS AUTOMÁTICAMENTE ---
-@st.cache_data(ttl=600)
-def obtener_nombres_hojas(sheet_id):
-    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit"
-    try:
-        r = requests.get(url)
-        encontrados = re.findall(r'\"name\":\"(.*?)\"', r.text)
-        hojas = []
-        for h in encontrados:
-            if h and h not in ['null', 'None', 'true', 'false'] and h not in hojas:
-                h_limpio = h.encode().decode('unicode_escape').strip()
-                if 0 < len(h_limpio) < 50:
-                    hojas.append(h_limpio)
-        return hojas if hojas else ["S1 Enero"]
     except:
-        return ["S1 Enero"]
+        pass
 
-# --- FUNCIÓN: CARGAR DATOS ---
+# --- FUNCIÓN: CARGAR DATOS DE LA HOJA SELECCIONADA ---
 @st.cache_data(ttl=0) 
 def cargar_datos(nombre_hoja):
     t = int(time.time())
@@ -53,18 +45,22 @@ def cargar_datos(nombre_hoja):
     data.columns = [str(col).strip() for col in data.columns]
     return data
 
+# --- LÓGICA PRINCIPAL ---
 try:
+    # 1. Obtener todas las hojas automáticamente
     listado_hojas = obtener_nombres_hojas(SHEET_ID)
 
     with st.sidebar:
         st.header("📅 Ciclo Escolar")
         hoja_sel = st.selectbox("Selecciona la semana:", listado_hojas)
-        if st.button("🔄 Forzar actualización"):
+        
+        if st.button("🔄 Actualizar Todo"):
             st.cache_data.clear()
             st.rerun()
         st.divider()
-        st.info(f"Hoja detectada: {hoja_sel}")
+        st.caption(f"Hojas encontradas: {len(listado_hojas)}")
 
+    # 2. Cargar datos de la hoja que el usuario eligió
     df = cargar_datos(hoja_sel)
 
     st.title("🏫 Portal de Consulta - 6° B")
@@ -74,22 +70,24 @@ try:
     matricula_input = st.text_input("Ingresa la matrícula del alumno:", placeholder="Ej. 18066902")
 
     if matricula_input:
+        # Buscamos la columna de matrícula
         col_mat = [c for c in df.columns if "MATRICULA" in c.upper()]
         
         if col_mat:
+            # Limpiamos datos para la búsqueda
             df['MAT_BUSCAR'] = df[col_mat[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
             fila = df[df['MAT_BUSCAR'] == matricula_input.strip()]
 
             if not fila.empty:
                 datos_alumno = fila.iloc[0]
-                nombre = f"{datos_alumno.get('NOMBRE', '')} {datos_alumno.get('PATERNO', '')}"
-                st.success(f"Información de: **{nombre}**")
+                nombre_completo = f"{datos_alumno.get('NOMBRE', '')} {datos_alumno.get('PATERNO', '')}"
+                st.success(f"Información de: **{nombre_completo}**")
                 
-                # EJECUCIÓN DE LA BITÁCORA
+                # Registro en bitácora
                 registrar_consulta_bitacora(matricula_input, hoja_sel)
                 
-                # TABLA DE RESULTADOS
-                columnas_omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'MAT_BUSCAR', 'ALUMNO_COMPLETO']
+                # Preparar tabla (omitir columnas internas)
+                columnas_omitir = ['NOMBRE', 'PATERNO', 'MATRICULA', 'MAT_BUSCAR', 'ALUMNO_COMPLETO']
                 alumno_tabla = fila.drop(columns=[c for c in columnas_omitir if c in fila.columns])
                 
                 resumen = alumno_tabla.T
@@ -119,7 +117,7 @@ try:
             else:
                 st.error("Matrícula no encontrada.")
         else:
-            st.error("No se encontró la columna 'MATRICULA'.")
+            st.error("No se detectó la columna 'MATRICULA' en esta hoja.")
 
 except Exception as e:
-    st.error(f"Error de conexión: {e}")
+    st.error(f"Hubo un detalle: {e}")
