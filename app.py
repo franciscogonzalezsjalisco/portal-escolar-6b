@@ -9,7 +9,7 @@ try:
 except:
     pass
 
-st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
+st.set_page_config(page_title="Urbana 690. Portal Escolar 6°B", layout="centered")
 
 # 2. IDENTIFICACIÓN DEL DOCUMENTO
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
