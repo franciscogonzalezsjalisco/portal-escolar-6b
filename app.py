@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import ssl
+import time
 from urllib.parse import quote
 
 # 1. CONFIGURACIÓN INICIAL
@@ -13,11 +14,14 @@ st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
 
 # 2. IDENTIFICACIÓN DEL DOCUMENTO
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
-MIS_HOJAS = ["S1 Enero", "S2 Enero", "S3 Enero", "S1 Febrero"]
+MIS_HOJAS = ["S1 Enero", "S2 Enero", "S3 Enero", "S4 Enero"]
 
-@st.cache_data(ttl=300)
+# NOTA: ttl=0 obliga a la app a leer el Excel SIEMPRE
+@st.cache_data(ttl=0) 
 def cargar_datos(nombre_hoja):
-    url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={quote(nombre_hoja)}"
+    # El parámetro 't' con la hora actual rompe el caché de Google
+    t = int(time.time())
+    url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={quote(nombre_hoja)}&t={t}"
     data = pd.read_csv(url)
     data.columns = [str(col).strip() for col in data.columns]
     return data
@@ -27,6 +31,12 @@ try:
     with st.sidebar:
         st.header("📅 Ciclo Escolar")
         hoja_sel = st.selectbox("Selecciona la semana:", MIS_HOJAS)
+        
+        # BOTÓN DE ACTUALIZACIÓN MANUAL (Por si acaso)
+        if st.button("🔄 Actualizar Datos Ahora"):
+            st.cache_data.clear()
+            st.rerun()
+            
         st.divider()
         st.info(f"Semana activa: {hoja_sel}")
 
@@ -51,7 +61,7 @@ try:
                 nombre = f"{datos_alumno.get('NOMBRE', '')} {datos_alumno.get('PATERNO', '')}"
                 st.success(f"Información de: **{nombre}**")
                 
-                # 4. TABLA DE RESULTADOS (Omitiendo datos ya mencionados)
+                # 4. TABLA DE RESULTADOS
                 columnas_a_omitir = ['NOMBRE', 'PATERNO', 'MATRICULA', 'MAT_BUSCAR', 'ALUMNO_COMPLETO']
                 alumno_tabla = fila.drop(columns=[c for c in columnas_a_omitir if c in fila.columns])
                 
@@ -71,11 +81,8 @@ try:
                         return "✅ Completado", 'background-color: #ccffcc; color: #006600;'
                     return str(val).replace('.0', ''), ''
 
-                # --- BLOQUE CORREGIDO (SANGRÍA) ---
                 tabla_estilo = resumen.copy()
                 estilos = []
-                
-                # Estas líneas DEBEN tener 16 espacios o 4 tabulaciones de margen
                 for n_fila, row in resumen.iterrows():
                     texto, css = formatear(row["Estado"], n_fila)
                     tabla_estilo.at[n_fila, "Estado"] = texto
