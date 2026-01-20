@@ -18,7 +18,7 @@ SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
 # Nota: El gid=0 suele ser la primera hoja. 
 # Si creaste las otras después, tienen números largos.
 # Vamos a usar la búsqueda por nombre con un ajuste de URL más potente.
-MIS_HOJAS = ["S1 Enero", "S2 Enero", "S3 Enero", "S1 Febrero"]
+MIS_HOJAS = ["S1 Enero", "S2 Enero", "S3 Enero", "S4 Enero"]
 
 @st.cache_data(ttl=600) # Se actualiza cada 10 minutos
 def cargar_datos(nombre_hoja):
