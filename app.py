@@ -15,67 +15,69 @@ st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
 MIS_HOJAS = ["S1 Enero", "S2 Enero", "S3 Enero", "S1 Febrero"]
 
-@st.cache_data(ttl=300) # Se actualiza cada 5 minutos
+@st.cache_data(ttl=300)
 def cargar_datos(nombre_hoja):
     url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={quote(nombre_hoja)}"
     data = pd.read_csv(url)
-    # Limpieza de encabezados
     data.columns = [str(col).strip() for col in data.columns]
-    
-    # CORRECCIÓN DEL ERROR: Usamos .str.strip() para columnas de texto
-    if 'NOMBRE' in data.columns and 'PATERNO' in data.columns:
-        nombres = data['NOMBRE'].astype(str).str.strip()
-        paternos = data['PATERNO'].astype(str).str.strip()
-        data['ALUMNO_COMPLETO'] = nombres + " " + paternos
     return data
 
 try:
     # --- BARRA LATERAL ---
     with st.sidebar:
         st.header("📅 Ciclo Escolar")
-        hoja_sel = st.selectbox("Selecciona la semana de consulta:", MIS_HOJAS)
+        hoja_sel = st.selectbox("Selecciona la semana:", MIS_HOJAS)
         st.divider()
-        st.caption("Si cambias de semana y no ves datos, refresca la página.")
+        st.info(f"Semana activa: {hoja_sel}")
 
     df = cargar_datos(hoja_sel)
 
     st.title("🏫 Portal de Consulta - 6° B")
-    st.subheader(f"📍 Registro de: {hoja_sel}")
+    st.subheader(f"📍 Reporte: {hoja_sel}")
     st.markdown("---")
 
-    # 3. BUSCADOR DE ALUMNOS
-    if 'ALUMNO_COMPLETO' in df.columns:
-        # Quitamos posibles valores vacíos y ordenamos
-        nombres_lista = sorted(df['ALUMNO_COMPLETO'].dropna().unique())
-        nombre_seleccionado = st.selectbox(
-            "Selecciona el nombre del alumno:", 
-            options=["-- Haz clic aquí para buscar --"] + nombres_lista
-        )
+    # 3. SEGURIDAD: CONSULTA POR MATRÍCULA
+    matricula_input = st.text_input("Ingresa la matrícula del alumno:", placeholder="Ej. 18066902")
 
-        if nombre_seleccionado != "-- Haz clic aquí para buscar --":
-            fila = df[df['ALUMNO_COMPLETO'] == nombre_seleccionado]
+    if matricula_input:
+        # Buscamos la columna de matrícula (flexible a mayúsculas/minúsculas)
+        col_mat = [c for c in df.columns if "MATRICULA" in c.upper()]
+        
+        if col_mat:
+            # Limpiamos la columna matrícula para comparar correctamente
+            df['MAT_BUSCAR'] = df[col_mat[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
+            fila = df[df['MAT_BUSCAR'] == matricula_input.strip()]
 
             if not fila.empty:
-                st.success(f"Resultados para: **{nombre_seleccionado}**")
+                datos_alumno = fila.iloc[0]
+                # Obtenemos nombre y apellido para el encabezado
+                nombre = f"{datos_alumno.get('NOMBRE', '')} {datos_alumno.get('PATERNO', '')}"
+                st.success(f"Información de: **{nombre}**")
                 
-                # 4. TABLA DE RESULTADOS
-                columnas_ignorar = ['ALUMNO_COMPLETO', 'MATRICULA', 'MAT_STR', 'MATRICULA_STR', 'MAT_BUSCAR']
-                alumno_final = fila.drop(columns=[c for c in columnas_ignorar if c in fila.columns])
+                # 4. TABLA DE RESULTADOS (Omitiendo datos ya mencionados)
+                # Definimos qué columnas NO queremos mostrar en la tabla detallada
+                columnas_a_omitir = [
+                    'NOMBRE', 'PATERNO', 'MATRICULA', 'MAT_BUSCAR', 
+                    'ALUMNO_COMPLETO', 'MAT_STR', 'MATRICULA_STR'
+                ]
                 
-                resumen = alumno_final.T
+                # Filtramos la fila para quitar esas columnas
+                alumno_tabla = fila.drop(columns=[c for c in columnas_a_omitir if c in fila.columns])
+                
+                resumen = alumno_tabla.T
                 resumen.columns = ["Estado"]
 
                 def formatear(val, nombre_fila):
                     v_str = str(val).upper().strip()
                     
-                    # Calificación Semanal (Redondeo a 1 decimal)
+                    # Calificación Semanal con 1 decimal
                     if "CALIFICACIÓN SEMANAL" in str(nombre_fila).upper():
                         try:
                             return f"{float(val):.1f}", 'background-color: #E3F2FD; font-weight: bold; color: #1565C0;'
                         except:
                             return val, ''
 
-                    # Tareas Pendientes/Completadas
+                    # Iconos para tareas
                     if v_str in ['0', '0.0', 'FALSE', 'FALSO', 'NAN', '', '0']:
                         return "❌ Pendiente", 'background-color: #ffcccc; color: #990000; font-weight: bold;'
                     if v_str in ['1', '1.0', 'TRUE', 'VERDADERO']:
@@ -83,19 +85,7 @@ try:
                     
                     return str(val).replace('.0', ''), ''
 
-                tabla_estilada = resumen.copy()
+                tabla_estilo = resumen.copy()
                 estilos = []
                 
                 for n_fila, row in resumen.iterrows():
-                    texto, css = formatear(row["Estado"], n_fila)
-                    tabla_estilada.at[n_fila, "Estado"] = texto
-                    estilos.append(css)
-
-                st.table(tabla_estilada.style.apply(lambda x: estilos, axis=0))
-            else:
-                st.warning("No hay datos para este alumno.")
-    else:
-        st.error(f"Revisa la hoja '{hoja_sel}': falta la columna NOMBRE o PATERNO.")
-
-except Exception as e:
-    st.error(f"Ocurrió un detalle al cargar la información: {e}")
