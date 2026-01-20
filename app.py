@@ -13,7 +13,7 @@ st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
 
 # 2. IDENTIFICACIÓN DEL DOCUMENTO
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
-MIS_HOJAS = ["S1 Enero", "S2 Enero", "S3 Enero", "S4 Enero"]
+MIS_HOJAS = ["S1 Enero", "S2 Enero", "S3 Enero", "S1 Febrero"]
 
 @st.cache_data(ttl=300)
 def cargar_datos(nombre_hoja):
