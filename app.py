@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 import ssl
 import time
-import requests
-import re
 from urllib.parse import quote
 
 # 1. CONFIGURACIÓN INICIAL
@@ -16,30 +14,12 @@ st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
 
 # 2. IDENTIFICACIÓN DEL DOCUMENTO
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
+MIS_HOJAS = ["S1 Enero", "S2 Enero", "S3 Enero", "S1 Febrero", "Información General"]
 
-# --- FUNCIÓN PARA DETECTAR HOJAS AUTOMÁTICAMENTE ---
-@st.cache_data(ttl=600) # Busca nuevas hojas cada 10 minutos
-def obtener_nombres_hojas(sheet_id):
-    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit"
-    try:
-        r = requests.get(url)
-        # Buscamos el patrón que Google usa para listar los nombres de las pestañas
-        encontrados = re.findall(r'\"name\":\"(.*?)\"', r.text)
-        hojas = []
-        for h in encontrados:
-            # Filtramos nombres técnicos de Google y evitamos duplicados
-            if h and h not in ['null', 'None', 'true', 'false'] and h not in hojas:
-                h_limpio = h.encode().decode('unicode_escape').strip()
-                # Solo agregamos si el nombre es razonable (evita errores de lectura)
-                if 0 < len(h_limpio) < 50:
-                    hojas.append(h_limpio)
-        return hojas if hojas else ["S1 Enero"]
-    except:
-        return ["S1 Enero"]
-
-# --- FUNCIÓN PARA CARGAR DATOS ---
+# NOTA: ttl=0 obliga a la app a leer el Excel SIEMPRE
 @st.cache_data(ttl=0) 
 def cargar_datos(nombre_hoja):
+    # El parámetro 't' con la hora actual rompe el caché de Google
     t = int(time.time())
     url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={quote(nombre_hoja)}&t={t}"
     data = pd.read_csv(url)
@@ -47,21 +27,18 @@ def cargar_datos(nombre_hoja):
     return data
 
 try:
-    # --- DETECCIÓN AUTOMÁTICA ---
-    listado_hojas = obtener_nombres_hojas(SHEET_ID)
-
     # --- BARRA LATERAL ---
     with st.sidebar:
         st.header("📅 Ciclo Escolar")
-        # El menú se llena con las hojas detectadas automáticamente
-        hoja_sel = st.selectbox("Selecciona la semana:", listado_hojas)
+        hoja_sel = st.selectbox("Selecciona la semana:", MIS_HOJAS)
         
-        if st.button("🔄 Forzar actualización"):
+        # BOTÓN DE ACTUALIZACIÓN MANUAL (Por si acaso)
+        if st.button("🔄 Actualizar Datos Ahora"):
             st.cache_data.clear()
             st.rerun()
             
         st.divider()
-        st.info(f"Hoja detectada: {hoja_sel}")
+        st.info(f"Semana activa: {hoja_sel}")
 
     df = cargar_datos(hoja_sel)
 
@@ -85,8 +62,8 @@ try:
                 st.success(f"Información de: **{nombre}**")
                 
                 # 4. TABLA DE RESULTADOS
-                columnas_omitir = ['NOMBRE', 'PATERNO', 'MATRICULA', 'MAT_BUSCAR', 'ALUMNO_COMPLETO']
-                alumno_tabla = fila.drop(columns=[c for c in columnas_omitir if c in fila.columns])
+                columnas_a_omitir = ['NOMBRE', 'PATERNO', 'MATRICULA', 'MAT_BUSCAR', 'ALUMNO_COMPLETO']
+                alumno_tabla = fila.drop(columns=[c for c in columnas_a_omitir if c in fila.columns])
                 
                 resumen = alumno_tabla.T
                 resumen.columns = ["Estado"]
