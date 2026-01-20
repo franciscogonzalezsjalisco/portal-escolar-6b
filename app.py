@@ -12,19 +12,20 @@ SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
 
 # --- FUNCIÓN: BITÁCORA DE CONSULTAS (Invisible para el usuario) ---
 def registrar_consulta_bitacora(matricula, hoja):
-    # URL de envío de tu formulario específico
-    FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfBv6p1-S-zL3Q6X_mF-nS_W7fXG8-b-K_V-z-qZ-B-w-Z-fQ/formResponse"
+    # URL corregida basada en tu código fuente
+    FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSe-0hVl_zC9W7f3pBwYn6p1_v-z-qZ-B-w-Z-fQ/formResponse"
     
-    # Payload con los IDs que extrajimos de tu HTML
+    # Payload con los IDs específicos de tu formulario
     payload = {
-        "entry.1768815482": matricula,  # Campo de Matrícula
-        "entry.499470000": hoja        # Campo para saber qué semana consultó
+        "entry.1768815482": str(matricula), 
+        "entry.499470000": str(hoja)
     }
     
     try:
-        requests.post(FORM_URL, data=payload)
-    except:
-        pass # Si falla el registro, la app sigue funcionando normal
+        # Enviamos con un 'timeout' para que no trabe la página si Google tarda
+        requests.post(FORM_URL, data=payload, timeout=5)
+    except Exception as e:
+        print(f"Error silencioso en bitácora: {e}")
 
 # --- FUNCIÓN: DETECTAR HOJAS AUTOMÁTICAMENTE ---
 @st.cache_data(ttl=600)
@@ -88,7 +89,7 @@ try:
                 registrar_consulta_bitacora(matricula_input, hoja_sel)
                 
                 # TABLA DE RESULTADOS
-                columnas_omitir = ['NOMBRE', 'PATERNO', 'MATRICULA', 'MAT_BUSCAR', 'ALUMNO_COMPLETO']
+                columnas_omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'MAT_BUSCAR', 'ALUMNO_COMPLETO']
                 alumno_tabla = fila.drop(columns=[c for c in columnas_omitir if c in fila.columns])
                 
                 resumen = alumno_tabla.T
