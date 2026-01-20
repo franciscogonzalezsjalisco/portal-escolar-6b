@@ -87,7 +87,7 @@ try:
                 registrar_consulta_bitacora(matricula_input, hoja_sel)
                 
                 # Preparar tabla (omitir columnas internas)
-                columnas_omitir = ['NOMBRE', 'PATERNO', 'MATRICULA', 'MAT_BUSCAR', 'ALUMNO_COMPLETO']
+                columnas_omitir = ['NOMBRE', 'MATERNO', 'PATERNO', 'MATRICULA', 'MAT_BUSCAR', 'ALUMNO_COMPLETO']
                 alumno_tabla = fila.drop(columns=[c for c in columnas_omitir if c in fila.columns])
                 
                 resumen = alumno_tabla.T
