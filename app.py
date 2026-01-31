@@ -4,11 +4,49 @@ import requests
 import time
 from urllib.parse import quote
 
-# 1. CONFIGURACIÓN DE PÁGINA
-st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
-
-# --- ENLACES DE IMÁGENES ---
-URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
+# --- PANTALLA 1: MENÚ INICIAL CON COLORES VIBRANTES ---
+if st.session_state.pantalla == 'inicio':
+    st.title("🏫 Portal Escolar 6° B")
+    st.markdown("### Selecciona la semana:")
+    
+    # Lista de colores vibrantes (Rojo, Azul, Verde, Amarillo, Violeta)
+    colores = ["#FF4B4B", "#1C83E1", "#28A745", "#FFD700", "#7D3CFF"]
+    
+    # Generar botones
+    for i in range(0, len(listado_hojas), 2):
+        cols = st.columns(2)
+        for j in range(2):
+            idx = i + j
+            if idx < len(listado_hojas):
+                nombre_h = listado_hojas[idx]
+                # Seleccionamos el color según la posición
+                color_btn = colores[idx % len(colores)]
+                
+                with cols[j]:
+                    # Inyectamos el color específico para ESTE botón por su etiqueta de texto
+                    st.markdown(f"""
+                        <style>
+                        button[kind="secondary"] p:contains("{nombre_h}"), 
+                        button:has(div p:contains("{nombre_h}")) {{
+                            background-color: {color_btn} !important;
+                            color: white !important;
+                        }}
+                        /* Selector alternativo para asegurar el fondo del botón completo */
+                        div:has(> button p:contains("{nombre_h}")) button {{
+                            background-color: {color_btn} !important;
+                        }}
+                        </style>
+                    """, unsafe_allow_html=True)
+                    
+                    if st.button(nombre_h, key=f"btn_{nombre_h}"):
+                        st.session_state.semana_activa = nombre_h
+                        st.session_state.pantalla = 'consulta'
+                        st.rerun()
+    
+    st.markdown("---")
+    if st.button("🔄 ¿No ves una semana nueva? Actualizar lista"):
+        st.cache_data.clear()
+        st.rerun()
 
 # 2. CSS PARA MODO OSCURO Y COLORES VIBRANTES
 st.markdown(f"""
