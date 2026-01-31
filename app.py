@@ -121,7 +121,7 @@ else:
                 st.success(f"✅ Alumno: **{fila.iloc[0].get('NOMBRE', '')} {fila.iloc[0].get('PATERNO', '')}**")
                 
                 # Mostrar tabla de resultados con el estilo anterior
-                columnas_omitir = ['NOMBRE', 'PATERNO', 'MATRICULA', 'MAT_BUSCAR', 'ALUMNO_COMPLETO']
+                columnas_omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'MAT_BUSCAR', 'ALUMNO_COMPLETO']
                 resumen = fila.drop(columns=[c for c in columnas_omitir if c in fila.columns]).T
                 resumen.columns = ["Estado"]
                 
