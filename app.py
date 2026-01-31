@@ -9,44 +9,24 @@ st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
 
 # --- ENLACES DE IMÁGENES ---
 URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
-# URL_LOGO = "Aquí_va_tu_logo_si_lo_tienes"
 
-# 2. CSS AVANZADO: COLORES VIBRANTES Y ADAPTABILIDAD
+# 2. CSS PARA MODO OSCURO Y COLORES VIBRANTES
 st.markdown(f"""
     <style>
-    /* Forzar fondo y visibilidad */
     .stApp {{
-        background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url("{URL_FONDO}");
+        background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url("{URL_FONDO}");
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
     }}
-
-    /* Estilo base de los botones */
     .stButton > button {{
-        width: 100%;
-        height: 85px;
-        border-radius: 15px;
-        font-weight: 900;
-        font-size: 20px;
-        color: white !important; /* Texto siempre blanco */
-        border: 2px solid rgba(255,255,255,0.3);
-        margin-bottom: 15px;
-        text-transform: uppercase;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        width: 100%; height: 75px; border-radius: 15px;
+        font-weight: 900; font-size: 18px; color: white !important;
+        border: 2px solid rgba(255,255,255,0.2); margin-bottom: 10px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }}
-
-    /* Evitar que el modo oscuro del cel cambie el color del texto */
-    .stMarkdown, p, h1, h2, h3, h5, label {{
-        color: white !important;
-    }}
-    
-    /* Input de matrícula legible */
-    input {{
-        background-color: white !important;
-        color: black !important;
-        border-radius: 10px !important;
-    }}
+    h1, h2, h3, p, label, .stMarkdown {{ color: white !important; }}
+    input {{ background-color: white !important; color: black !important; border-radius: 8px !important; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -59,50 +39,77 @@ def obtener_nombres_hojas(sheet_id):
         return xls.sheet_names
     except: return ["S1 Enero"]
 
+@st.cache_data(ttl=0) 
+def cargar_datos(nombre_hoja):
+    SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
+    url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={quote(nombre_hoja)}&t={int(time.time())}"
+    data = pd.read_csv(url)
+    data.columns = [str(col).strip() for col in data.columns]
+    return data
+
 # --- LÓGICA DE NAVEGACIÓN ---
-if 'pantalla' not in st.session_state:
-    st.session_state.pantalla = 'inicio'
-if 'semana_activa' not in st.session_state:
-    st.session_state.semana_activa = None
+if 'pantalla' not in st.session_state: st.session_state.pantalla = 'inicio'
+if 'semana_activa' not in st.session_state: st.session_state.semana_activa = None
 
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
 listado_hojas = obtener_nombres_hojas(SHEET_ID)
 
-# --- PANTALLA 1: MENÚ VIBRANTE ---
+# --- PANTALLA 1: MENÚ INICIAL ---
 if st.session_state.pantalla == 'inicio':
     st.title("🏫 Portal Escolar 6° B")
-    st.write("### Selecciona la semana a consultar:")
-
-    # Lista de colores vibrantes solicitados
-    colores = ["#FF4B4B", "#1C83E1", "#28A745", "#FFD700", "#7D3CFF"] # Rojo, Azul, Verde, Amarillo, Violeta
-
-    # Generar botones con colores cíclicos
+    st.markdown("### Selecciona la semana:")
+    
+    colores = ["#FF4B4B", "#1C83E1", "#28A745", "#FFD700", "#7D3CFF"]
+    
     for i in range(0, len(listado_hojas), 2):
         cols = st.columns(2)
         for j in range(2):
             idx = i + j
             if idx < len(listado_hojas):
+                nombre_h = listado_hojas[idx]
                 color = colores[idx % len(colores)]
                 with cols[j]:
-                    # Aplicamos el color específico a cada botón mediante un truco de CSS por ID
-                    st.markdown(f"<style>div[data-testid='column']:nth-of-type({j+1}) button[key='{listado_hojas[idx]}'] {{ background-color: {color} !important; }}</style>", unsafe_allow_html=True)
-                    if st.button(listado_hojas[idx], key=listado_hojas[idx]):
-                        st.session_state.semana_activa = listado_hojas[idx]
+                    st.markdown(f'<style>div[data-testid="column"]:nth-of-type({j+1}) button[key="{nombre_h}"] {{ background-color: {color} !important; }}</style>', unsafe_allow_html=True)
+                    if st.button(nombre_h, key=nombre_h):
+                        st.session_state.semana_activa = nombre_h
                         st.session_state.pantalla = 'consulta'
                         st.rerun()
 
-# --- PANTALLA 2: CONSULTA ---
+# --- PANTALLA 2: CONSULTA Y RESULTADOS ---
 else:
     st.markdown(f"## 📍 {st.session_state.semana_activa}")
-    
     if st.button("⬅️ VOLVER AL MENÚ"):
         st.session_state.pantalla = 'inicio'
         st.rerun()
 
-    # (Aquí sigue tu lógica de cargar_datos y el input de matrícula)
-    # He incluido un contenedor blanco para que los resultados se vean bien
-    with st.container():
-        st.markdown('<div style="background-color: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px;">', unsafe_allow_html=True)
-        matricula_input = st.text_input("Introduce la matrícula:")
-        # ... resto del código de búsqueda ...
-        st.markdown('</div>', unsafe_allow_html=True)
+    # CARGAR DATOS DE LA SEMANA SELECCIONADA
+    df = cargar_datos(st.session_state.semana_activa)
+    
+    matricula_input = st.text_input("Ingresa la matrícula del alumno:", placeholder="Ej. 18066902")
+
+    if matricula_input:
+        col_mat = [c for c in df.columns if "MATRICULA" in c.upper()]
+        if col_mat:
+            # Limpiar datos para la búsqueda
+            df['MAT_BUSCAR'] = df[col_mat[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
+            fila = df[df['MAT_BUSCAR'] == matricula_input.strip()]
+
+            if not fila.empty:
+                datos = fila.iloc[0]
+                st.success(f"✅ **{datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}**")
+                
+                # Formatear tabla de resultados
+                columnas_omitir = ['NOMBRE', 'PATERNO', 'MATRICULA', 'MAT_BUSCAR', 'ALUMNO_COMPLETO']
+                resumen = fila.drop(columns=[c for c in columnas_omitir if c in fila.columns]).T
+                resumen.columns = ["Estado"]
+
+                def aplicar_estilo(val):
+                    v = str(val).upper().strip()
+                    if v in ['0', '0.0', 'FALSE', 'NAN', '']: return "❌ Pendiente"
+                    if v in ['1', '1.0', 'TRUE']: return "✅ OK"
+                    return val
+
+                resumen["Estado"] = resumen["Estado"].apply(aplicar_estilo)
+                st.table(resumen)
+            else:
+                st.error("Matrícula no encontrada.")
