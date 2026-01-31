@@ -3,7 +3,7 @@ import pandas as pd
 import time
 from urllib.parse import quote
 
-# 1. CONFIGURACIÓN
+# 1. CONFIGURACIÓN INICIAL
 st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
 
 # --- INICIALIZAR MEMORIA ---
@@ -15,47 +15,41 @@ if 'alumno_datos' not in st.session_state: st.session_state.alumno_datos = None
 URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
 
-# 2. CSS DEFINITIVO ANTI-MODO OSCURO
+# 2. CSS INTEGRADO (ANTI MODO-OSCURO + BOTONES HOMOGÉNEOS)
 st.markdown(f"""
     <style>
-    /* 1. Forzar el fondo base para que no cambie a negro */
     .stApp {{
         background: white !important;
-        background: linear-gradient(rgba(255,255,255,0.75), rgba(255,255,255,0.75)), url("{URL_FONDO}") !important;
+        background: linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)), url("{URL_FONDO}") !important;
         background-size: cover !important;
         background-attachment: fixed !important;
     }}
-
-    /* 2. Forzar colores de texto para que NO se inviertan */
-    h1, h2, h3, h4, h5, h6, p, label, span, div {{
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important; /* Para navegadores móviles */
+    h1, h2, h3, p, label, span, div {{
+        color: black !important;
+        -webkit-text-fill-color: black !important;
     }}
-
-    /* 3. Botones Homogéneos y Vibrantes con texto protegido */
     div.stButton > button {{
         width: 100% !important;
         height: 80px !important;
         border-radius: 15px !important;
-        font-size: 18px !important;
         font-weight: 900 !important;
+        font-size: 18px !important;
+        color: white !important;
+        -webkit-text-fill-color: white !important;
         text-transform: uppercase !important;
-        border: 2px solid rgba(255,255,255,0.4) !important;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
-        color: #FFFFFF !important; /* Texto siempre blanco */
-        -webkit-text-fill-color: #FFFFFF !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
+        border: none !important;
     }}
-
-    /* 4. Inputs (Buscador) siempre con fondo blanco y texto negro */
+    /* Input más visible */
     input {{
-        background-color: #FFFFFF !important;
-        color: #000000 !important;
-        border: 1px solid #CCCCCC !important;
+        background-color: #f0f2f6 !important;
+        color: black !important;
+        border: 2px solid #1D3557 !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-# 3. FUNCIONES
+# 3. FUNCIONES DE DATOS
 @st.cache_data(ttl=60)
 def obtener_nombres_hojas(sid):
     try:
@@ -71,12 +65,12 @@ def cargar_datos(nombre_hoja):
 
 listado_hojas = obtener_nombres_hojas(SHEET_ID)
 
-# --- PANTALLA 1: INICIO ---
+# --- PANTALLA 1: SELECCIÓN DE SEMANA ---
 if st.session_state.pantalla == 'inicio':
     st.title("🏫 Portal Escolar 6° B")
-    st.markdown("### 📅 Selecciona la semana")
+    st.markdown("### Selecciona la semana:")
     
-    colores = ["#E63946", "#1D3557", "#2A9D8F", "#E9C46A", "#8338EC"]
+    colores = ["#E63946", "#457B9D", "#2A9D8F", "#F4A261", "#8338EC"]
     
     for i in range(0, len(listado_hojas), 2):
         cols = st.columns(2)
@@ -92,80 +86,74 @@ if st.session_state.pantalla == 'inicio':
                         st.session_state.pantalla = 'matricula'
                         st.rerun()
 
-# --- PANTALLA 2: MATRÍCULA ---
+# --- PANTALLA 2: CAPTURA DE MATRÍCULA ---
 elif st.session_state.pantalla == 'matricula':
-    st.markdown(f"## 📍 {st.session_state.semana_activa}")
-    mat_input = st.text_input("Introduce la matrícula:", value=st.session_state.matricula_guardada)
+    st.title(f"📍 {st.session_state.semana_activa}")
+    
+    mat_input = st.text_input("Ingresa la matrícula del alumno:", value=st.session_state.matricula_guardada)
     st.session_state.matricula_guardada = mat_input
 
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("⬅️ MENÚ"):
-            st.session_state.pantalla = 'inicio'
-            st.rerun()
-    with c2:
-        if st.button("🔍 CONSULTAR"):
-            if mat_input:
+    # Botones de acción
+    if st.button("🔍 CONSULTAR AHORA"):
+        if mat_input.strip() == "":
+            st.warning("⚠️ Por favor, escribe una matrícula.")
+        else:
+            with st.spinner('Buscando datos...'):
                 df = cargar_datos(st.session_state.semana_activa)
                 df.columns = [str(col).strip() for col in df.columns]
                 col_mat = [c for c in df.columns if "MATRICULA" in c.upper()]
+                
                 if col_mat:
                     df['BUSCAR'] = df[col_mat[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
                     fila = df[df['BUSCAR'] == mat_input.strip()]
+                    
                     if not fila.empty:
-                        st.session_state.alumno_datos = fila.iloc
+                        st.session_state.alumno_datos = fila.iloc[0].to_dict()
+                        st.session_state.pantalla = 'resultados'
+                        st.rerun()
+                    else:
+                        st.error("❌ Matrícula no encontrada.")
 
-# --- PANTALLA 3: INFORMACIÓN DETALLADA (RESULTADOS) ---
+    if st.button("⬅️ VOLVER AL MENÚ"):
+        st.session_state.pantalla = 'inicio'
+        st.rerun()
+
+# --- PANTALLA 3: RESULTADOS ---
 elif st.session_state.pantalla == 'resultados':
     datos = st.session_state.alumno_datos
-    st.balloons()
+    st.title("📑 Reporte de Actividades")
+    st.success(f"🎓 **ALUMNO:** {datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}")
     
-    st.success(f"### 🎓 {datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}")
-    
-    # --- ESTILO ESPECÍFICO PARA LA TABLA RESPONSIVA ---
-    st.markdown("""
-        <style>
-        /* Forzar bordes y líneas en la tabla */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            border: 2px solid #333333;
-            background-color: white;
-            font-size: clamp(12px, 3.5vw, 16px) !important; /* Ajusta el tamaño de letra según pantalla */
-        }
-        th, td {
-            border: 1px solid #dddddd !important;
-            padding: 8px !important;
-            text-align: left !important;
-            color: black !important;
-        }
-        th {
-            background-color: #f2f2f2 !important;
-            font-weight: bold !important;
-        }
-        /* Zebra striping para lectura fácil */
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        </style>
-    """, unsafe_allow_html=True)
-
-    # Filtrar y limpiar datos
-    omitir = ['NOMBRE', 'PATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']
+    # Procesar tabla
+    omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']
     res_filtrado = {k: v for k, v in datos.items() if k.upper() not in omitir}
-    
     df_res = pd.DataFrame(res_filtrado.items(), columns=["Actividad", "Estado"])
     
-    def limpiar_resultado(val):
+    def limpiar(val):
         v = str(val).upper().strip()
-        if v in ['1', '1.0', 'TRUE', 'VERDADERO']: return "✅ Completado"
-        if v in ['0', '0.0', 'FALSE', 'FALSO', 'NAN', '']: return "❌ Pendiente"
+        if v in ['1', '1.0', 'TRUE']: return "✅ Completado"
+        if v in ['0', '0.0', 'FALSE', 'NAN', '']: return "❌ Pendiente"
         return val
+    df_res["Estado"] = df_res["Estado"].apply(limpiar)
 
-    df_res["Estado"] = df_res["Estado"].apply(limpiar_resultado)
-
-    # Renderizar la tabla como HTML para tener control total de los bordes
-    st.write(df_res.to_html(index=False, escape=False), unsafe_allow_html=True)
+    # Mostrar tabla con bordes HTML
+    st.markdown(f"""
+        <div style="overflow-x:auto; background: white; padding: 10px; border-radius: 10px;">
+            <style>
+                .res-table {{ width:100%; border-collapse: collapse; color: black !important; }}
+                .res-table th, .res-table td {{ border: 1px solid #333 !important; padding: 12px; text-align: left; font-size: 14px; }}
+                .res-table th {{ background: #eee; font-weight: bold; }}
+            </style>
+            <table class="res-table">
+                <thead><tr><th>Actividad</th><th>Estado</th></tr></thead>
+                <tbody>
+                    {''.join([f'<tr><td>{row["Actividad"]}</td><td>{row["Estado"]}</td></tr>' for _, row in df_res.iterrows()])}
+                </tbody>
+            </table>
+        </div>
+    """, unsafe_allow_html=True)
     
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("---")
     if st.button("⬅️ REALIZAR OTRA CONSULTA"):
         st.session_state.pantalla = 'matricula'
         st.rerun()
