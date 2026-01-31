@@ -108,19 +108,42 @@ elif st.session_state.pantalla == 'matricula':
 # --- PANTALLA 3: INFORMACIÓN DETALLADA (RESULTADOS) ---
 elif st.session_state.pantalla == 'resultados':
     datos = st.session_state.alumno_datos
-    st.balloons() # ¡Efecto de celebración!
-    st.success(f"### 🎓 {datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}")
-    st.info(f"Reporte correspondiente a: **{st.session_state.semana_activa}**")
+    st.balloons()
     
-    # Crear una tabla bonita para los resultados
-    # Filtramos columnas que no queremos mostrar
-    omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']
+    st.success(f"### 🎓 {datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}")
+    
+    # --- ESTILO ESPECÍFICO PARA LA TABLA RESPONSIVA ---
+    st.markdown("""
+        <style>
+        /* Forzar bordes y líneas en la tabla */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid #333333;
+            background-color: white;
+            font-size: clamp(12px, 3.5vw, 16px) !important; /* Ajusta el tamaño de letra según pantalla */
+        }
+        th, td {
+            border: 1px solid #dddddd !important;
+            padding: 8px !important;
+            text-align: left !important;
+            color: black !important;
+        }
+        th {
+            background-color: #f2f2f2 !important;
+            font-weight: bold !important;
+        }
+        /* Zebra striping para lectura fácil */
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Filtrar y limpiar datos
+    omitir = ['NOMBRE', 'PATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']
     res_filtrado = {k: v for k, v in datos.items() if k.upper() not in omitir}
     
-    # Convertimos a DataFrame para mostrarlo como tabla
-    df_res = pd.DataFrame(res_filtrado.items(), columns=["Actividad/Materia", "Estado"])
+    df_res = pd.DataFrame(res_filtrado.items(), columns=["Actividad", "Estado"])
     
-    # Limpieza de valores (Evitar el 'True' o '1.0')
     def limpiar_resultado(val):
         v = str(val).upper().strip()
         if v in ['1', '1.0', 'TRUE', 'VERDADERO']: return "✅ Completado"
@@ -128,10 +151,11 @@ elif st.session_state.pantalla == 'resultados':
         return val
 
     df_res["Estado"] = df_res["Estado"].apply(limpiar_resultado)
+
+    # Renderizar la tabla como HTML para tener control total de los bordes
+    st.write(df_res.to_html(index=False, escape=False), unsafe_allow_html=True)
     
-    st.table(df_res)
-    
-    st.markdown("---")
+    st.markdown("<br>", unsafe_allow_html=True)
     if st.button("⬅️ REALIZAR OTRA CONSULTA"):
         st.session_state.pantalla = 'matricula'
         st.rerun()
