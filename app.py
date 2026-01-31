@@ -11,36 +11,40 @@ st.set_page_config(page_title="Portal Escolar 6°B", layout="wide")
 URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
 URL_LOGO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/ESCUDO 690 (1).png"
 
-# 2. DISEÑO CSS PERSONALIZADO (BOTONES EN FILA DOBLE Y COLORES)
+# 2. ESTILO VISUAL PERSONALIZADO (CSS)
 st.markdown(f"""
     <style>
-    /* Fondo de la aplicación */
     .stApp {{
-        background: linear-gradient(rgba(255,255,255,0.8), rgba(255,255,255,0.8)), url("{URL_FONDO}");
+        /* Capa de claridad sobre el fondo para que el texto sea legible */
+        background: linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)), 
+                    url("{URL_FONDO}");
         background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
     }}
     
-    /* Contenedor de botones cuadrícula */
-    .grid-container {{
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
-        padding: 10px;
-    }}
-    
-    /* Estilo de botones de semana */
+    /* Botones más modernos y táctiles */
     .stButton > button {{
+        width: 100%;
         height: 80px;
-        border-radius: 15px;
+        border-radius: 20px;
+        font-weight: 800;
         font-size: 18px;
-        font-weight: bold;
+        border: 2px solid rgba(255,255,255,0.5);
         color: white;
-        border: none;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        transition: transform 0.2s;
     }}
+    
+    .stButton > button:active {{
+        transform: scale(0.95);
+    }}
+
+    /* Colores vibrantes para los botones (puedes cambiarlos) */
+    div[data-testid="column"]:nth-child(1) .stButton > button {{ background-color: #FF6B6B; }} /* Rojo suave */
+    div[data-testid="column"]:nth-child(2) .stButton > button {{ background-color: #4ECDC4; }} /* Turquesa */
     </style>
     """, unsafe_allow_html=True)
-
 # 3. FUNCIONES DE DATOS
 @st.cache_data(ttl=300)
 def obtener_nombres_hojas(sheet_id):
