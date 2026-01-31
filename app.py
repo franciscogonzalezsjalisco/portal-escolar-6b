@@ -71,7 +71,7 @@ if st.session_state.pantalla == 'inicio':
     with col_logo:
         st.image(URL_LOGO, width=100)
     with col_tit:
-        st.title("Portal Escolar 6° B")
+        st.title("Seguimiento 6° B")
         st.subheader("¡Bienvenido! Selecciona una semana:")
 
     # Colores para los botones
