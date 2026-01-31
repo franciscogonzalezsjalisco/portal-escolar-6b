@@ -8,7 +8,7 @@ from urllib.parse import quote
 st.set_page_config(page_title="Portal Escolar 6°B", layout="wide")
 
 # --- URLs DE IMÁGENES (REEMPLAZA AQUÍ) ---
-URL_FONDO = "https://tu-enlace-aqui.jpg" 
+URL_FONDO = "https://github.com/franciscogonzalezsjalisco/portal-escolar-6b/blob/main/6b.png" 
 URL_LOGO = "https://tu-logo-aqui.png"
 
 # 2. DISEÑO CSS PERSONALIZADO (BOTONES EN FILA DOBLE Y COLORES)
