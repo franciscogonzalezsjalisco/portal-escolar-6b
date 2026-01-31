@@ -117,7 +117,7 @@ else:
                 datos = fila.iloc[0]
                 st.success(f"✅ **{datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}**")
                 
-                columnas_omitir = ['NOMBRE', 'PATERNO', 'MATRICULA', 'MAT_BUSCAR', 'ALUMNO_COMPLETO']
+                columnas_omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'MAT_BUSCAR', 'ALUMNO_COMPLETO']
                 resumen = fila.drop(columns=[c for c in columnas_omitir if c in fila.columns]).T
                 resumen.columns = ["Estado"]
 
