@@ -6,7 +6,7 @@ from urllib.parse import quote
 # 1. CONFIGURACIÓN
 st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
 
-# --- INICIALIZAR MEMORIA (Añadimos 'alumno_datos') ---
+# --- INICIALIZAR MEMORIA ---
 if 'pantalla' not in st.session_state: st.session_state.pantalla = 'inicio'
 if 'semana_activa' not in st.session_state: st.session_state.semana_activa = None
 if 'matricula_guardada' not in st.session_state: st.session_state.matricula_guardada = ""
@@ -15,26 +15,42 @@ if 'alumno_datos' not in st.session_state: st.session_state.alumno_datos = None
 URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
 
-# 2. CSS PARA BOTONES HOMOGÉNEOS Y VISIBILIDAD
+# 2. CSS DEFINITIVO ANTI-MODO OSCURO
 st.markdown(f"""
     <style>
+    /* 1. Forzar el fondo base para que no cambie a negro */
     .stApp {{
-        background: linear-gradient(rgba(255,255,255,0.75), rgba(255,255,255,0.75)), url("{URL_FONDO}");
-        background-size: cover;
-        background-attachment: fixed;
+        background: white !important;
+        background: linear-gradient(rgba(255,255,255,0.75), rgba(255,255,255,0.75)), url("{URL_FONDO}") !important;
+        background-size: cover !important;
+        background-attachment: fixed !important;
     }}
-    h1, h2, h3, p, label {{ color: #000000 !important; font-family: 'Arial', sans-serif; }}
-    
-    .stButton > button {{
-        width: 100% !important; height: 80px !important;
-        border-radius: 15px !important; color: white !important;
-        font-size: 18px !important; font-weight: bold !important;
-        text-transform: uppercase; border: none !important;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
+
+    /* 2. Forzar colores de texto para que NO se inviertan */
+    h1, h2, h3, h4, h5, h6, p, label, span, div {{
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important; /* Para navegadores móviles */
     }}
-    /* Estilo especial para el botón de 'Volver' para que no sea tan gigante */
-    .bot-volver > div > button {{
-        height: 50px !important; background-color: #607D8B !important;
+
+    /* 3. Botones Homogéneos y Vibrantes con texto protegido */
+    div.stButton > button {{
+        width: 100% !important;
+        height: 80px !important;
+        border-radius: 15px !important;
+        font-size: 18px !important;
+        font-weight: 900 !important;
+        text-transform: uppercase !important;
+        border: 2px solid rgba(255,255,255,0.4) !important;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+        color: #FFFFFF !important; /* Texto siempre blanco */
+        -webkit-text-fill-color: #FFFFFF !important;
+    }}
+
+    /* 4. Inputs (Buscador) siempre con fondo blanco y texto negro */
+    input {{
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        border: 1px solid #CCCCCC !important;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -55,11 +71,12 @@ def cargar_datos(nombre_hoja):
 
 listado_hojas = obtener_nombres_hojas(SHEET_ID)
 
-# --- PANTALLA 1: SELECCIÓN DE SEMANA ---
+# --- PANTALLA 1: INICIO ---
 if st.session_state.pantalla == 'inicio':
     st.title("🏫 Portal Escolar 6° B")
-    st.markdown("### 📅 Selecciona la semana a consultar")
-    colores = ["#E63946", "#457B9D", "#2A9D8F", "#F4A261", "#8338EC"]
+    st.markdown("### 📅 Selecciona la semana")
+    
+    colores = ["#E63946", "#1D3557", "#2A9D8F", "#E9C46A", "#8338EC"]
     
     for i in range(0, len(listado_hojas), 2):
         cols = st.columns(2)
@@ -75,22 +92,18 @@ if st.session_state.pantalla == 'inicio':
                         st.session_state.pantalla = 'matricula'
                         st.rerun()
 
-# --- PANTALLA 2: CAPTURA DE MATRÍCULA ---
+# --- PANTALLA 2: MATRÍCULA ---
 elif st.session_state.pantalla == 'matricula':
     st.markdown(f"## 📍 {st.session_state.semana_activa}")
-    st.markdown("---")
-    
-    mat_input = st.text_input("Introduce la matrícula del alumno:", value=st.session_state.matricula_guardada)
+    mat_input = st.text_input("Introduce la matrícula:", value=st.session_state.matricula_guardada)
     st.session_state.matricula_guardada = mat_input
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown('<div class="bot-volver">', unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
         if st.button("⬅️ MENÚ"):
             st.session_state.pantalla = 'inicio'
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-    with col2:
+    with c2:
         if st.button("🔍 CONSULTAR"):
             if mat_input:
                 df = cargar_datos(st.session_state.semana_activa)
@@ -100,10 +113,7 @@ elif st.session_state.pantalla == 'matricula':
                     df['BUSCAR'] = df[col_mat[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
                     fila = df[df['BUSCAR'] == mat_input.strip()]
                     if not fila.empty:
-                        st.session_state.alumno_datos = fila.iloc[0].to_dict()
-                        st.session_state.pantalla = 'resultados'
-                        st.rerun()
-                    else: st.error("Matrícula no encontrada.")
+                        st.session_state.alumno_datos = fila.iloc
 
 # --- PANTALLA 3: INFORMACIÓN DETALLADA (RESULTADOS) ---
 elif st.session_state.pantalla == 'resultados':
