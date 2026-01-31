@@ -15,29 +15,31 @@ if 'matricula_guardada' not in st.session_state: st.session_state.matricula_guar
 URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
 
-# 2. CSS ROBUSTO (BOTONES VIBRANTES Y TEXTO CLARO)
+# 2. CSS PARA BOTONES HOMOGÉNEOS Y VISIBILIDAD
 st.markdown(f"""
     <style>
     .stApp {{
-        background: linear-gradient(rgba(255,255,255,0.8), rgba(255,255,255,0.8)), url("{URL_FONDO}");
+        background: linear-gradient(rgba(255,255,255,0.75), rgba(255,255,255,0.75)), url("{URL_FONDO}");
         background-size: cover;
         background-attachment: fixed;
     }}
+    /* Títulos claros en cualquier pantalla */
     h1, h2, h3, p, label {{
-        color: #1E1E1E !important;
-        font-weight: bold !important;
+        color: #000000 !important;
+        font-family: 'Arial', sans-serif;
     }}
-    /* Botones base */
-    .stButton > button {{
-        width: 100%;
-        height: 70px;
-        border-radius: 15px;
+    /* Botones con tamaño fijo y diseño uniforme */
+    div.stButton > button {{
+        width: 100% !important;
+        height: 80px !important; /* Altura fija */
+        border-radius: 12px !important;
         color: white !important;
         font-size: 18px !important;
-        font-weight: 800 !important;
-        border: none !important;
-        box-shadow: 2px 4px 8px rgba(0,0,0,0.2);
-        margin-bottom: 5px;
+        font-weight: bold !important;
+        text-transform: uppercase;
+        border: 2px solid rgba(255,255,255,0.3) !important;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
+        transition: 0.3s;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -49,8 +51,7 @@ def obtener_nombres_hojas(sid):
     try:
         xls = pd.ExcelFile(url, engine='openpyxl')
         return xls.sheet_names
-    except:
-        return ["S1 Enero"]
+    except: return ["S1 Enero"]
 
 @st.cache_data(ttl=0) 
 def cargar_datos(nombre_hoja):
@@ -59,36 +60,38 @@ def cargar_datos(nombre_hoja):
 
 listado_hojas = obtener_nombres_hojas(SHEET_ID)
 
-# --- PANTALLA 1: INICIO (BOTONES DE COLORES) ---
+# --- PANTALLA 1: INICIO ---
 if st.session_state.pantalla == 'inicio':
     st.title("🏫 Portal Escolar 6° B")
-    st.write("Selecciona una semana:")
+    st.markdown("### 📅 Selecciona la semana")
     
-    colores = ["#D32F2F", "#1976D2", "#388E3C", "#FBC02D", "#7B1FA2"]
+    # Paleta de colores vibrantes
+    colores = ["#E63946", "#457B9D", "#2A9D8F", "#F4A261", "#8338EC"]
     
-    # Grid de 2 columnas para que quepan mejor en el cel
+    # Generar grid
     for i in range(0, len(listado_hojas), 2):
         cols = st.columns(2)
         for j in range(2):
             idx = i + j
             if idx < len(listado_hojas):
                 nombre_h = listado_hojas[idx]
-                color = colores[idx % len(colores)]
+                color_vibrante = colores[idx % len(colores)]
                 with cols[j]:
-                    st.markdown(f'<style>button[key="btn_{idx}"] {{ background-color: {color} !important; }}</style>', unsafe_allow_html=True)
+                    # Inyección de color forzada por cada botón individualmente
+                    st.markdown(f'<style>button[key="btn_{idx}"] {{ background-color: {color_vibrante} !important; }}</style>', unsafe_allow_html=True)
                     if st.button(nombre_h, key=f"btn_{idx}"):
                         st.session_state.semana_activa = nombre_h
                         st.session_state.pantalla = 'consulta'
                         st.rerun()
             
     st.markdown("---")
-    if st.button("🔄 Actualizar Lista", key="refresh"):
+    if st.button("🔄 ACTUALIZAR LISTA", key="refresh"):
         st.cache_data.clear()
         st.rerun()
 
 # --- PANTALLA 2: CONSULTA ---
 else:
-    st.subheader(f"📍 Semana: {st.session_state.semana_activa}")
+    st.markdown(f"## 📍 {st.session_state.semana_activa}")
     if st.button("⬅️ VOLVER AL MENÚ", key="volver"):
         st.session_state.pantalla = 'inicio'
         st.rerun()
@@ -96,7 +99,7 @@ else:
     df = cargar_datos(st.session_state.semana_activa)
     df.columns = [str(col).strip() for col in df.columns]
     
-    mat_input = st.text_input("Ingresa Matrícula:", value=st.session_state.matricula_guardada)
+    mat_input = st.text_input("Introduce la matrícula:", value=st.session_state.matricula_guardada)
     st.session_state.matricula_guardada = mat_input
 
     if mat_input:
@@ -108,5 +111,9 @@ else:
             if not fila.empty:
                 datos = fila.iloc[0]
                 st.success(f"Alumno: {datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}")
-                # Omitimos columnas de control
-                columnas_bor
+                columnas_borrar = [c for c in df.columns if c.upper() in ['NOMBRE', 'PATERNO', 'MATRICULA', 'BUSCAR']]
+                resumen = fila.drop(columns=columnas_borrar).T
+                resumen.columns = ["Resultados"]
+                st.table(resumen)
+            else:
+                st.error("Matrícula no encontrada.")
