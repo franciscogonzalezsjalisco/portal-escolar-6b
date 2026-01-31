@@ -92,28 +92,42 @@ if st.session_state.pantalla == 'inicio':
 # --- PANTALLA 2: CONSULTA ---
 else:
     st.markdown(f"## 📍 {st.session_state.semana_activa}")
-    if st.button("⬅️ VOLVER AL MENÚ", key="volver"):
+    if st.button("⬅️ VOLVER AL MENÚ"):
         st.session_state.pantalla = 'inicio'
         st.rerun()
 
     df = cargar_datos(st.session_state.semana_activa)
-    df.columns = [str(col).strip() for col in df.columns]
     
-    mat_input = st.text_input("Introduce la matrícula:", value=st.session_state.matricula_guardada)
-    st.session_state.matricula_guardada = mat_input
+    matricula_input = st.text_input(
+        "Ingresa la matrícula del alumno:", 
+        value=st.session_state.matricula_guardada,
+        placeholder="Ej. 18066902"
+    )
 
-    if mat_input:
+    if matricula_input != st.session_state.matricula_guardada:
+        st.session_state.matricula_guardada = matricula_input
+
+    if st.session_state.matricula_guardada:
         col_mat = [c for c in df.columns if "MATRICULA" in c.upper()]
         if col_mat:
-            df['BUSCAR'] = df[col_mat[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
-            fila = df[df['BUSCAR'] == mat_input.strip()]
+            df['MAT_BUSCAR'] = df[col_mat[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
+            fila = df[df['MAT_BUSCAR'] == st.session_state.matricula_guardada.strip()]
 
             if not fila.empty:
                 datos = fila.iloc[0]
-                st.success(f"Alumno: {datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}")
-                columnas_borrar = [c for c in df.columns if c.upper() in ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR']]
-                resumen = fila.drop(columns=columnas_borrar).T
-                resumen.columns = ["Resultados"]
+                st.success(f"✅ **{datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}**")
+                
+                columnas_omitir = ['NOMBRE', 'PATERNO', 'MATRICULA', 'MAT_BUSCAR', 'ALUMNO_COMPLETO']
+                resumen = fila.drop(columns=[c for c in columnas_omitir if c in fila.columns]).T
+                resumen.columns = ["Estado"]
+
+                def aplicar_estilo(val):
+                    v = str(val).upper().strip()
+                    if v in ['0', '0.0', 'FALSE', 'NAN', '']: return "❌ Pendiente"
+                    if v in ['1', '1.0', 'TRUE']: return "✅ Completado"
+                    return val
+
+                resumen["Estado"] = resumen["Estado"].apply(aplicar_estilo)
                 st.table(resumen)
             else:
                 st.error("Matrícula no encontrada.")
