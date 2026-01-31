@@ -111,7 +111,7 @@ else:
             if not fila.empty:
                 datos = fila.iloc[0]
                 st.success(f"Alumno: {datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}")
-                columnas_borrar = [c for c in df.columns if c.upper() in ['NOMBRE', 'PATERNO', 'MATRICULA', 'BUSCAR']]
+                columnas_borrar = [c for c in df.columns if c.upper() in ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR']]
                 resumen = fila.drop(columns=columnas_borrar).T
                 resumen.columns = ["Resultados"]
                 st.table(resumen)
