@@ -4,7 +4,7 @@ import time
 from urllib.parse import quote
 
 # 1. CONFIGURACIÓN INICIAL
-st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
+st.set_page_config(page_title="Seguimiento 6°B", layout="centered")
 
 # --- INICIALIZAR MEMORIA ---
 if 'pantalla' not in st.session_state: st.session_state.pantalla = 'inicio'
