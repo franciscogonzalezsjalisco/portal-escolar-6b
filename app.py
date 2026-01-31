@@ -31,7 +31,7 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 # 3. FUNCIONES DE DATOS
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=300) # Se actualiza cada 5 minutos o al limpiar cache
 def obtener_nombres_hojas(sheet_id):
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=xlsx"
     try:
@@ -47,9 +47,10 @@ def cargar_datos(nombre_hoja):
     data.columns = [str(col).strip() for col in data.columns]
     return data
 
-# --- LÓGICA DE NAVEGACIÓN ---
+# --- LÓGICA DE MEMORIA (SESSION STATE) ---
 if 'pantalla' not in st.session_state: st.session_state.pantalla = 'inicio'
 if 'semana_activa' not in st.session_state: st.session_state.semana_activa = None
+if 'matricula_guardada' not in st.session_state: st.session_state.matricula_guardada = ""
 
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
 listado_hojas = obtener_nombres_hojas(SHEET_ID)
@@ -74,25 +75,40 @@ if st.session_state.pantalla == 'inicio':
                         st.session_state.semana_activa = nombre_h
                         st.session_state.pantalla = 'consulta'
                         st.rerun()
+    
+    # Botón para forzar actualización de nuevas hojas
+    st.markdown("---")
+    if st.button("🔄 ¿No ves una semana nueva? Actualizar lista"):
+        st.cache_data.clear()
+        st.rerun()
 
 # --- PANTALLA 2: CONSULTA Y RESULTADOS ---
 else:
     st.markdown(f"## 📍 {st.session_state.semana_activa}")
+    
+    # Botón Volver (Ahora no borra la matrícula)
     if st.button("⬅️ VOLVER AL MENÚ"):
         st.session_state.pantalla = 'inicio'
         st.rerun()
 
-    # CARGAR DATOS DE LA SEMANA SELECCIONADA
     df = cargar_datos(st.session_state.semana_activa)
     
-    matricula_input = st.text_input("Ingresa la matrícula del alumno:", placeholder="Ej. 18066902")
+    # Input de matrícula vinculado a la memoria
+    matricula_input = st.text_input(
+        "Ingresa la matrícula del alumno:", 
+        value=st.session_state.matricula_guardada, # Carga lo que había antes
+        placeholder="Ej. 18066902"
+    )
 
-    if matricula_input:
+    # Guardamos lo que el usuario escribe en la memoria
+    if matricula_input != st.session_state.matricula_guardada:
+        st.session_state.matricula_guardada = matricula_input
+
+    if st.session_state.matricula_guardada:
         col_mat = [c for c in df.columns if "MATRICULA" in c.upper()]
         if col_mat:
-            # Limpiar datos para la búsqueda
             df['MAT_BUSCAR'] = df[col_mat[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
-            fila = df[df['MAT_BUSCAR'] == matricula_input.strip()]
+            fila = df[df['MAT_BUSCAR'] == st.session_state.matricula_guardada.strip()]
 
             if not fila.empty:
                 datos = fila.iloc[0]
@@ -106,7 +122,7 @@ else:
                 def aplicar_estilo(val):
                     v = str(val).upper().strip()
                     if v in ['0', '0.0', 'FALSE', 'NAN', '']: return "❌ Pendiente"
-                    if v in ['1', '1.0', 'TRUE']: return "✅ OK"
+                    if v in ['1', '1.0', 'TRUE']: return "✅ Completado"
                     return val
 
                 resumen["Estado"] = resumen["Estado"].apply(aplicar_estilo)
