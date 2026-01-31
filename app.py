@@ -7,9 +7,9 @@ from urllib.parse import quote
 # 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="Portal Escolar 6°B", layout="wide")
 
-# --- URLs DE IMÁGENES (REEMPLAZA AQUÍ) ---
-URL_FONDO = "https://github.com/franciscogonzalezsjalisco/portal-escolar-6b/blob/main/6b.png" 
-URL_LOGO = "https://tu-logo-aqui.png"
+# --- ENLACE DIRECTO DE GITHUB ---
+URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
+URL_LOGO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/ESCUDO 690 (1).png"
 
 # 2. DISEÑO CSS PERSONALIZADO (BOTONES EN FILA DOBLE Y COLORES)
 st.markdown(f"""
