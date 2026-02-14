@@ -36,6 +36,18 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
+# --- FUNCIÓN PARA LIMPIAR VALORES (LÓGICA NUEVA) ---
+def procesar_valor(val):
+    v_str = str(val).strip().upper()
+    # Si está vacío o es nulo
+    if v_str in ['NAN', '', '0', '0.0', 'FALSE', 'FALSO']:
+        return "❌ Pendiente"
+    # Si es exactamente un 1 o True (entregado estándar)
+    if v_str in ['1', '1.0', 'TRUE', 'VERDADERO']:
+        return "✅ Completado"
+    # Si es cualquier otra cosa (Calificación, número de trabajos, texto)
+    return str(val)
+
 # 2. FUNCIONES DE DATOS Y PDF
 @st.cache_data(ttl=60)
 def obtener_nombres_hojas(sid):
@@ -62,19 +74,20 @@ def generar_pdf(datos_alumno, semana, porcentaje, mensaje):
     pdf.cell(0, 10, f"Cumplimiento: {porcentaje}%", ln=True)
     pdf.ln(5)
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(140, 10, " ACTIVIDAD", border=1)
-    pdf.cell(50, 10, " ESTADO", border=1, ln=True)
+    pdf.cell(130, 10, " ACTIVIDAD", border=1)
+    pdf.cell(60, 10, " ESTADO / CALIF.", border=1, ln=True)
     pdf.set_font("Helvetica", "", 10)
     
     omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']
     for k, v in datos_alumno.items():
         if k.upper() not in omitir:
-            estado = "Completado" if str(v).upper().strip() in ['1', '1.0', 'TRUE'] else "Pendiente"
+            estado = procesar_valor(v)
+            # Limpiar emojis para el PDF (FPDF no los soporta bien sin fuentes extra)
+            estado_limpio = estado.replace("❌ ", "").replace("✅ ", "")
             texto_k = str(k).encode('latin-1', 'ignore').decode('latin-1')
-            pdf.cell(140, 8, f" {texto_k[:60]}", border=1)
-            pdf.cell(50, 8, f" {estado}", border=1, ln=True)
+            pdf.cell(130, 8, f" {texto_k[:60]}", border=1)
+            pdf.cell(60, 8, f" {estado_limpio}", border=1, ln=True)
     
-    # IMPORTANTE: Convertimos el bytearray a bytes puros
     return bytes(pdf.output())
 
 listado_hojas = obtener_nombres_hojas(SHEET_ID)
@@ -126,8 +139,9 @@ elif st.session_state.pantalla == 'resultados':
     omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']
     res_filtrado = {k: v for k, v in datos.items() if k.upper() not in omitir}
     
+    # El progreso solo cuenta los que son 1 o números > 0 (asumiendo que cualquier número es "cumplido")
     total = len(res_filtrado)
-    entregadas = sum(1 for v in res_filtrado.values() if str(v).upper().strip() in ['1', '1.0', 'TRUE'])
+    entregadas = sum(1 for v in res_filtrado.values() if str(v).strip() not in ['0', '0.0', 'nan', '', 'False'])
     porcentaje = int((entregadas / total) * 100) if total > 0 else 0
     
     color_p = "#E63946" if porcentaje < 50 else "#F4A261" if porcentaje < 80 else "#2A9D8F"
@@ -137,12 +151,14 @@ elif st.session_state.pantalla == 'resultados':
     st.markdown(f'**Progreso de entrega: {porcentaje}%**')
     st.markdown(f'<div style="width:100%; background:#e0e0e0; border-radius:10px; height:20px;"><div style="width:{porcentaje}%; background:{color_p}; height:20px; border-radius:10px;"></div></div>', unsafe_allow_html=True)
     
+    # Crear tabla con la nueva lógica de procesamiento
     df_res = pd.DataFrame(res_filtrado.items(), columns=["Actividad", "Estado"])
-    df_res["Estado"] = df_res["Estado"].apply(lambda x: "✅ Completado" if str(x).upper().strip() in ['1', '1.0', 'TRUE'] else "❌ Pendiente")
-    filas_tabla = "".join([f'<tr><td style="border:1px solid #ddd; padding:8px;">{k}</td><td style="border:1px solid #ddd; padding:8px;">{v}</td></tr>' for k,v in df_res.values])
-    st.markdown(f'<div style="background: white; padding: 10px; border-radius: 10px; border: 1px solid #333;"><table style="width:100%; border-collapse: collapse; color: black;"><tr style="background: #eee;"><th>Actividad</th><th>Estado</th></tr>{filas_tabla}</table></div>', unsafe_allow_html=True)
+    df_res["Estado"] = df_res["Estado"].apply(procesar_valor)
+    
+    filas_tabla = "".join([f'<tr><td style="border:1px solid #ddd; padding:8px;">{row["Actividad"]}</td><td style="border:1px solid #ddd; padding:8px; font-weight:bold;">{row["Estado"]}</td></tr>' for _, row in df_res.iterrows()])
+    st.markdown(f'<div style="background: white; padding: 10px; border-radius: 10px; border: 1px solid #333;"><table style="width:100%; border-collapse: collapse; color: black;"><tr style="background: #eee;"><th>Actividad</th><th>Estado / Calif.</th></tr>{filas_tabla}</table></div>', unsafe_allow_html=True)
 
-    # BOTÓN PDF (Solución al error bytearray)
+    # BOTÓN PDF
     try:
         pdf_data = generar_pdf(datos, st.session_state.semana_activa, porcentaje, mensaje)
         st.download_button(
