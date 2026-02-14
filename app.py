@@ -40,7 +40,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. FUNCIONES DE DATOS Y PDF (CORREGIDA)
+# 3. FUNCIONES DE DATOS Y PDF (SOPORTE BYTESIO)
 @st.cache_data(ttl=60)
 def obtener_nombres_hojas(sid):
     try:
@@ -67,22 +67,23 @@ def generar_pdf(datos_alumno, semana, porcentaje, mensaje):
     pdf.cell(0, 10, f"Cumplimiento: {porcentaje}%", ln=True)
     pdf.ln(5)
     
-    # Tabla
+    # Encabezado Tabla
     pdf.set_font("Helvetica", "B", 10)
     pdf.cell(140, 10, " ACTIVIDAD", border=1)
     pdf.cell(50, 10, " ESTADO", border=1, ln=True)
-    pdf.set_font("Helvetica", "", 10)
     
+    pdf.set_font("Helvetica", "", 10)
     omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']
+    
     for k, v in datos_alumno.items():
         if k.upper() not in omitir:
             estado = "Completado" if str(v).upper().strip() in ['1', '1.0', 'TRUE'] else "Pendiente"
-            # Limpiar caracteres especiales para evitar errores en PDF
+            # Limpieza de caracteres para PDF
             texto_k = str(k).encode('latin-1', 'ignore').decode('latin-1')
             pdf.cell(140, 8, f" {texto_k[:60]}", border=1)
             pdf.cell(50, 8, f" {estado}", border=1, ln=True)
     
-    # SALIDA CORREGIDA: Usar output() sin argumentos y manejarlo como bytes
+    # Retornar como bytes directamente (Soporte fpdf2)
     return pdf.output()
 
 listado_hojas = obtener_nombres_hojas(SHEET_ID)
@@ -98,9 +99,8 @@ if st.session_state.pantalla == 'inicio':
             idx = i + j
             if idx < len(listado_hojas):
                 nombre_h = listado_hojas[idx]
-                color_v = colores[idx % 5]
                 with cols[j]:
-                    st.markdown(f'<style>button[key="btn_{idx}"] {{ background-color: {color_v} !important; }}</style>', unsafe_allow_html=True)
+                    st.markdown(f'<style>button[key="btn_{idx}"] {{ background-color: {colores[idx % 5]} !important; }}</style>', unsafe_allow_html=True)
                     if st.button(nombre_h, key=f"btn_{idx}"):
                         st.session_state.semana_activa = nombre_h
                         st.session_state.pantalla = 'matricula'
@@ -125,7 +125,6 @@ elif st.session_state.pantalla == 'matricula':
                     st.session_state.pantalla = 'resultados'
                     st.rerun()
                 else: st.error("❌ Matrícula no encontrada.")
-    
     if st.button("⬅️ VOLVER AL MENÚ"):
         st.session_state.pantalla = 'inicio'
         st.rerun()
@@ -145,29 +144,34 @@ elif st.session_state.pantalla == 'resultados':
 
     st.success(f"🎓 **ALUMNO:** {datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}")
     
+    # Barra de progreso
     st.markdown(f'**Progreso de entrega: {porcentaje}%**')
     st.markdown(f'<div style="width:100%; background:#e0e0e0; border-radius:10px; height:20px;"><div style="width:{porcentaje}%; background:{color_p}; height:20px; border-radius:10px;"></div></div>', unsafe_allow_html=True)
     st.info(mensaje)
 
+    # Tabla en pantalla
     df_res = pd.DataFrame(res_filtrado.items(), columns=["Actividad", "Estado"])
     df_res["Estado"] = df_res["Estado"].apply(lambda x: "✅ Completado" if str(x).upper().strip() in ['1', '1.0', 'TRUE'] else "❌ Pendiente")
-    
     filas_tabla = "".join([f'<tr><td style="border:1px solid #ddd; padding:8px;">{k}</td><td style="border:1px solid #ddd; padding:8px;">{v}</td></tr>' for k,v in df_res.values])
     st.markdown(f'<div style="background: white; padding: 10px; border-radius: 10px; border: 1px solid #333;"><table style="width:100%; border-collapse: collapse; color: black;"><tr style="background: #eee;"><th>Actividad</th><th>Estado</th></tr>{filas_tabla}</table></div>', unsafe_allow_html=True)
 
-    # BOTÓN PDF CORREGIDO
+    # --- BOTÓN PDF CON BUFFER DE BYTES ---
     try:
-        pdf_output = generar_pdf(datos, st.session_state.semana_activa, porcentaje, mensaje)
+        # Generar el contenido del PDF
+        pdf_content = generar_pdf(datos, st.session_state.semana_activa, porcentaje, mensaje)
         
-        # IMPORTANTE: Convertir a bytes de forma segura para Streamlit
+        # El truco: Convertir a bytes si es necesario o pasar directamente
+        # En las versiones nuevas de fpdf2, .output() devuelve bytearray o bytes
+        pdf_bytes = bytes(pdf_output) if 'pdf_output' in locals() else pdf_content
+
         st.download_button(
             label="📥 DESCARGAR REPORTE PDF", 
-            data=bytes(pdf_output), # Forzamos la conversión a bytes
+            data=pdf_bytes,
             file_name=f"Reporte_{datos.get('PATERNO','')}.pdf", 
             mime="application/pdf"
         )
     except Exception as e:
-        st.error(f"Error técnico al generar el archivo. Por favor reportar: {e}")
+        st.error(f"Error al procesar el archivo: {e}")
     
     if st.button("⬅️ NUEVA CONSULTA"):
         st.session_state.pantalla = 'matricula'
