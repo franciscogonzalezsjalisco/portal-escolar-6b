@@ -17,7 +17,7 @@ if 'alumno_datos' not in st.session_state: st.session_state.alumno_datos = None
 URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
 
-# 2. CSS ANTI MODO-OSCURO Y ESTÉTICA
+# 2. CSS ANTI MODO-OSCURO
 st.markdown(f"""
     <style>
     .stApp {{
@@ -58,7 +58,7 @@ def generar_pdf(datos_alumno, semana, porcentaje, mensaje):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "PORTAL ESCOLAR 6° B - REPORTE SEMANAL", ln=True, align="C")
+    pdf.cell(0, 10, "PORTAL ESCOLAR 6 B - REPORTE SEMANAL", ln=True, align="C")
     pdf.ln(5)
     pdf.set_font("Arial", "", 12)
     pdf.cell(0, 10, f"Alumno: {datos_alumno.get('NOMBRE', '')} {datos_alumno.get('PATERNO', '')}", ln=True)
@@ -69,6 +69,7 @@ def generar_pdf(datos_alumno, semana, porcentaje, mensaje):
     pdf.cell(140, 10, " ACTIVIDAD", border=1)
     pdf.cell(50, 10, " ESTADO", border=1, ln=True)
     pdf.set_font("Arial", "", 10)
+    
     omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']
     for k, v in datos_alumno.items():
         if k.upper() not in omitir:
@@ -90,8 +91,9 @@ if st.session_state.pantalla == 'inicio':
             idx = i + j
             if idx < len(listado_hojas):
                 nombre_h = listado_hojas[idx]
+                color_v = colores[idx % 5]
                 with cols[j]:
-                    st.markdown(f'<style>button[key="btn_{idx}"] {{ background-color: {colores[idx % 5]} !important; }}</style>', unsafe_allow_html=True)
+                    st.markdown(f'<style>button[key="btn_{idx}"] {{ background-color: {color_v} !important; }}</style>', unsafe_allow_html=True)
                     if st.button(nombre_h, key=f"btn_{idx}"):
                         st.session_state.semana_activa = nombre_h
                         st.session_state.pantalla = 'matricula'
@@ -102,6 +104,7 @@ elif st.session_state.pantalla == 'matricula':
     st.title(f"📍 {st.session_state.semana_activa}")
     mat_input = st.text_input("Ingresa la matrícula del alumno:", value=st.session_state.matricula_guardada)
     st.session_state.matricula_guardada = mat_input
+    
     if st.button("🔍 CONSULTAR AHORA"):
         if mat_input:
             df = cargar_datos(st.session_state.semana_activa)
@@ -115,6 +118,7 @@ elif st.session_state.pantalla == 'matricula':
                     st.session_state.pantalla = 'resultados'
                     st.rerun()
                 else: st.error("❌ Matrícula no encontrada.")
+    
     if st.button("⬅️ VOLVER AL MENÚ"):
         st.session_state.pantalla = 'inicio'
         st.rerun()
@@ -126,16 +130,54 @@ elif st.session_state.pantalla == 'resultados':
     omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']
     res_filtrado = {k: v for k, v in datos.items() if k.upper() not in omitir}
     
-    # Cálculos
+    # Cálculos de progreso
     total = len(res_filtrado)
     entregadas = sum(1 for v in res_filtrado.values() if str(v).upper().strip() in ['1', '1.0', 'TRUE'])
     porcentaje = int((entregadas / total) * 100) if total > 0 else 0
     
+    # Colores y Mensajes
     color_p = "#E63946" if porcentaje < 50 else "#F4A261" if porcentaje < 80 else "#2A9D8F"
     mensaje = "🌟 ¡Excelente trabajo!" if porcentaje == 100 else "✅ ¡Muy bien!" if porcentaje >= 80 else "⚠️ Tienes pendientes." if porcentaje >= 50 else "🚩 ¡Atención requerida!"
 
     st.success(f"🎓 **ALUMNO:** {datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}")
     
-    # Barra de progreso
-    st.markdown(f'**Progreso: {porcentaje}%**')
-    st.markdown(f'<div style="width:100%; background:#e0e0e0; border-radius:10px;"><div style="width:{porcentaje}%; background:{color_p}; height:20px; border-radius:10px;"></div></div>', unsafe_allow_
+    # BARRA DE PROGRESO (Corregida)
+    st.markdown(f'**Progreso de entrega: {porcentaje}%**')
+    barra_html = f"""
+    <div style="width:100%; background:#e0e0e0; border-radius:10px; height:20px;">
+        <div style="width:{porcentaje}%; background:{color_p}; height:20px; border-radius:10px;"></div>
+    </div>
+    """
+    st.markdown(barra_html, unsafe_allow_html=True)
+    st.info(mensaje)
+
+    # TABLA DE RESULTADOS
+    df_res = pd.DataFrame(res_filtrado.items(), columns=["Actividad", "Estado"])
+    df_res["Estado"] = df_res["Estado"].apply(lambda x: "✅ Completado" if str(x).upper().strip() in ['1', '1.0', 'TRUE'] else "❌ Pendiente")
+    
+    filas_tabla = "".join([f'<tr><td style="border:1px solid #ddd; padding:8px;">{k}</td><td style="border:1px solid #ddd; padding:8px;">{v}</td></tr>' for k,v in df_res.values])
+    tabla_html = f"""
+    <div style="background: white; padding: 10px; border-radius: 10px; border: 1px solid #333;">
+        <table style="width:100%; border-collapse: collapse; color: black;">
+            <tr style="background: #eee;"><th>Actividad</th><th>Estado</th></tr>
+            {filas_tabla}
+        </table>
+    </div>
+    """
+    st.markdown(tabla_html, unsafe_allow_html=True)
+
+    # BOTÓN PDF (Debe estar instalado fpdf2 en requirements.txt)
+    try:
+        pdf_bytes = generar_pdf(datos, st.session_state.semana_activa, porcentaje, mensaje)
+        st.download_button(
+            label="📥 DESCARGAR REPORTE PDF", 
+            data=pdf_bytes, 
+            file_name=f"Reporte_{datos.get('PATERNO','')}.pdf", 
+            mime="application/pdf"
+        )
+    except Exception as e:
+        st.error("Error al generar PDF. Asegúrate de tener 'fpdf2' en requirements.txt")
+    
+    if st.button("⬅️ NUEVA CONSULTA"):
+        st.session_state.pantalla = 'matricula'
+        st.rerun()
