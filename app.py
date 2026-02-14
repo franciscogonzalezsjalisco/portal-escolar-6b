@@ -3,12 +3,10 @@ import pandas as pd
 import time
 from urllib.parse import quote
 from fpdf import FPDF
-import io
 
-# 1. CONFIGURACIÓN INICIAL
+# 1. CONFIGURACIÓN E INTERFAZ
 st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
 
-# --- INICIALIZAR MEMORIA ---
 if 'pantalla' not in st.session_state: st.session_state.pantalla = 'inicio'
 if 'semana_activa' not in st.session_state: st.session_state.semana_activa = None
 if 'matricula_guardada' not in st.session_state: st.session_state.matricula_guardada = ""
@@ -17,7 +15,6 @@ if 'alumno_datos' not in st.session_state: st.session_state.alumno_datos = None
 URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
 
-# 2. CSS ANTI MODO-OSCURO
 st.markdown(f"""
     <style>
     .stApp {{
@@ -27,7 +24,6 @@ st.markdown(f"""
         background-attachment: fixed !important;
     }}
     h1, h2, h3, p, label, span, div {{ color: black !important; -webkit-text-fill-color: black !important; }}
-    
     div.stButton > button {{
         width: 100% !important; height: 70px !important;
         border-radius: 15px !important; font-weight: 900 !important;
@@ -40,7 +36,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. FUNCIONES DE DATOS Y PDF (SOPORTE BYTESIO)
+# 2. FUNCIONES DE DATOS Y PDF
 @st.cache_data(ttl=60)
 def obtener_nombres_hojas(sid):
     try:
@@ -60,31 +56,26 @@ def generar_pdf(datos_alumno, semana, porcentaje, mensaje):
     pdf.set_font("Helvetica", "B", 16)
     pdf.cell(0, 10, "PORTAL ESCOLAR 6 B - REPORTE SEMANAL", ln=True, align="C")
     pdf.ln(5)
-    
     pdf.set_font("Helvetica", "", 12)
     pdf.cell(0, 10, f"Alumno: {datos_alumno.get('NOMBRE', '')} {datos_alumno.get('PATERNO', '')}", ln=True)
     pdf.cell(0, 10, f"Semana: {semana}", ln=True)
     pdf.cell(0, 10, f"Cumplimiento: {porcentaje}%", ln=True)
     pdf.ln(5)
-    
-    # Encabezado Tabla
     pdf.set_font("Helvetica", "B", 10)
     pdf.cell(140, 10, " ACTIVIDAD", border=1)
     pdf.cell(50, 10, " ESTADO", border=1, ln=True)
-    
     pdf.set_font("Helvetica", "", 10)
-    omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']
     
+    omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']
     for k, v in datos_alumno.items():
         if k.upper() not in omitir:
             estado = "Completado" if str(v).upper().strip() in ['1', '1.0', 'TRUE'] else "Pendiente"
-            # Limpieza de caracteres para PDF
             texto_k = str(k).encode('latin-1', 'ignore').decode('latin-1')
             pdf.cell(140, 8, f" {texto_k[:60]}", border=1)
             pdf.cell(50, 8, f" {estado}", border=1, ln=True)
     
-    # Retornar como bytes directamente (Soporte fpdf2)
-    return pdf.output()
+    # IMPORTANTE: Convertimos el bytearray a bytes puros
+    return bytes(pdf.output())
 
 listado_hojas = obtener_nombres_hojas(SHEET_ID)
 
@@ -140,38 +131,28 @@ elif st.session_state.pantalla == 'resultados':
     porcentaje = int((entregadas / total) * 100) if total > 0 else 0
     
     color_p = "#E63946" if porcentaje < 50 else "#F4A261" if porcentaje < 80 else "#2A9D8F"
-    mensaje = "🌟 ¡Excelente trabajo!" if porcentaje == 100 else "✅ ¡Muy bien!" if porcentaje >= 80 else "⚠️ Tienes pendientes." if porcentaje >= 50 else "🚩 ¡Atención requerida!"
+    mensaje = "🌟 ¡Excelente trabajo!" if porcentaje == 100 else "✅ ¡Muy bien!" if porcentaje >= 80 else "⚠️ Tienes pendientes."
 
     st.success(f"🎓 **ALUMNO:** {datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}")
-    
-    # Barra de progreso
     st.markdown(f'**Progreso de entrega: {porcentaje}%**')
     st.markdown(f'<div style="width:100%; background:#e0e0e0; border-radius:10px; height:20px;"><div style="width:{porcentaje}%; background:{color_p}; height:20px; border-radius:10px;"></div></div>', unsafe_allow_html=True)
-    st.info(mensaje)
-
-    # Tabla en pantalla
+    
     df_res = pd.DataFrame(res_filtrado.items(), columns=["Actividad", "Estado"])
     df_res["Estado"] = df_res["Estado"].apply(lambda x: "✅ Completado" if str(x).upper().strip() in ['1', '1.0', 'TRUE'] else "❌ Pendiente")
     filas_tabla = "".join([f'<tr><td style="border:1px solid #ddd; padding:8px;">{k}</td><td style="border:1px solid #ddd; padding:8px;">{v}</td></tr>' for k,v in df_res.values])
     st.markdown(f'<div style="background: white; padding: 10px; border-radius: 10px; border: 1px solid #333;"><table style="width:100%; border-collapse: collapse; color: black;"><tr style="background: #eee;"><th>Actividad</th><th>Estado</th></tr>{filas_tabla}</table></div>', unsafe_allow_html=True)
 
-    # --- BOTÓN PDF CON BUFFER DE BYTES ---
+    # BOTÓN PDF (Solución al error bytearray)
     try:
-        # Generar el contenido del PDF
-        pdf_content = generar_pdf(datos, st.session_state.semana_activa, porcentaje, mensaje)
-        
-        # El truco: Convertir a bytes si es necesario o pasar directamente
-        # En las versiones nuevas de fpdf2, .output() devuelve bytearray o bytes
-        pdf_bytes = bytes(pdf_output) if 'pdf_output' in locals() else pdf_content
-
+        pdf_data = generar_pdf(datos, st.session_state.semana_activa, porcentaje, mensaje)
         st.download_button(
             label="📥 DESCARGAR REPORTE PDF", 
-            data=pdf_bytes,
+            data=pdf_data, 
             file_name=f"Reporte_{datos.get('PATERNO','')}.pdf", 
             mime="application/pdf"
         )
     except Exception as e:
-        st.error(f"Error al procesar el archivo: {e}")
+        st.error(f"Error al generar PDF: {e}")
     
     if st.button("⬅️ NUEVA CONSULTA"):
         st.session_state.pantalla = 'matricula'
