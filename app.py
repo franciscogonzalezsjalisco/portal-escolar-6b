@@ -40,7 +40,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. FUNCIONES DE DATOS Y PDF
+# 3. FUNCIONES DE DATOS Y PDF (CORREGIDA)
 @st.cache_data(ttl=60)
 def obtener_nombres_hojas(sid):
     try:
@@ -57,25 +57,32 @@ def cargar_datos(nombre_hoja):
 def generar_pdf(datos_alumno, semana, porcentaje, mensaje):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", "B", 16)
+    pdf.set_font("Helvetica", "B", 16)
     pdf.cell(0, 10, "PORTAL ESCOLAR 6 B - REPORTE SEMANAL", ln=True, align="C")
     pdf.ln(5)
-    pdf.set_font("Arial", "", 12)
+    
+    pdf.set_font("Helvetica", "", 12)
     pdf.cell(0, 10, f"Alumno: {datos_alumno.get('NOMBRE', '')} {datos_alumno.get('PATERNO', '')}", ln=True)
     pdf.cell(0, 10, f"Semana: {semana}", ln=True)
     pdf.cell(0, 10, f"Cumplimiento: {porcentaje}%", ln=True)
     pdf.ln(5)
-    pdf.set_font("Arial", "B", 10)
+    
+    # Tabla
+    pdf.set_font("Helvetica", "B", 10)
     pdf.cell(140, 10, " ACTIVIDAD", border=1)
     pdf.cell(50, 10, " ESTADO", border=1, ln=True)
-    pdf.set_font("Arial", "", 10)
+    pdf.set_font("Helvetica", "", 10)
     
     omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']
     for k, v in datos_alumno.items():
         if k.upper() not in omitir:
             estado = "Completado" if str(v).upper().strip() in ['1', '1.0', 'TRUE'] else "Pendiente"
-            pdf.cell(140, 8, f" {str(k)[:60]}", border=1)
+            # Limpiar caracteres especiales para evitar errores en PDF
+            texto_k = str(k).encode('latin-1', 'ignore').decode('latin-1')
+            pdf.cell(140, 8, f" {texto_k[:60]}", border=1)
             pdf.cell(50, 8, f" {estado}", border=1, ln=True)
+    
+    # SALIDA CORREGIDA: Usar output() sin argumentos y manejarlo como bytes
     return pdf.output()
 
 listado_hojas = obtener_nombres_hojas(SHEET_ID)
@@ -126,57 +133,41 @@ elif st.session_state.pantalla == 'matricula':
 # --- PANTALLA 3: RESULTADOS ---
 elif st.session_state.pantalla == 'resultados':
     datos = st.session_state.alumno_datos
-    # Ocultar Materno y filtrar columnas
     omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']
     res_filtrado = {k: v for k, v in datos.items() if k.upper() not in omitir}
     
-    # Cálculos de progreso
     total = len(res_filtrado)
     entregadas = sum(1 for v in res_filtrado.values() if str(v).upper().strip() in ['1', '1.0', 'TRUE'])
     porcentaje = int((entregadas / total) * 100) if total > 0 else 0
     
-    # Colores y Mensajes
     color_p = "#E63946" if porcentaje < 50 else "#F4A261" if porcentaje < 80 else "#2A9D8F"
     mensaje = "🌟 ¡Excelente trabajo!" if porcentaje == 100 else "✅ ¡Muy bien!" if porcentaje >= 80 else "⚠️ Tienes pendientes." if porcentaje >= 50 else "🚩 ¡Atención requerida!"
 
     st.success(f"🎓 **ALUMNO:** {datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}")
     
-    # BARRA DE PROGRESO (Corregida)
     st.markdown(f'**Progreso de entrega: {porcentaje}%**')
-    barra_html = f"""
-    <div style="width:100%; background:#e0e0e0; border-radius:10px; height:20px;">
-        <div style="width:{porcentaje}%; background:{color_p}; height:20px; border-radius:10px;"></div>
-    </div>
-    """
-    st.markdown(barra_html, unsafe_allow_html=True)
+    st.markdown(f'<div style="width:100%; background:#e0e0e0; border-radius:10px; height:20px;"><div style="width:{porcentaje}%; background:{color_p}; height:20px; border-radius:10px;"></div></div>', unsafe_allow_html=True)
     st.info(mensaje)
 
-    # TABLA DE RESULTADOS
     df_res = pd.DataFrame(res_filtrado.items(), columns=["Actividad", "Estado"])
     df_res["Estado"] = df_res["Estado"].apply(lambda x: "✅ Completado" if str(x).upper().strip() in ['1', '1.0', 'TRUE'] else "❌ Pendiente")
     
     filas_tabla = "".join([f'<tr><td style="border:1px solid #ddd; padding:8px;">{k}</td><td style="border:1px solid #ddd; padding:8px;">{v}</td></tr>' for k,v in df_res.values])
-    tabla_html = f"""
-    <div style="background: white; padding: 10px; border-radius: 10px; border: 1px solid #333;">
-        <table style="width:100%; border-collapse: collapse; color: black;">
-            <tr style="background: #eee;"><th>Actividad</th><th>Estado</th></tr>
-            {filas_tabla}
-        </table>
-    </div>
-    """
-    st.markdown(tabla_html, unsafe_allow_html=True)
+    st.markdown(f'<div style="background: white; padding: 10px; border-radius: 10px; border: 1px solid #333;"><table style="width:100%; border-collapse: collapse; color: black;"><tr style="background: #eee;"><th>Actividad</th><th>Estado</th></tr>{filas_tabla}</table></div>', unsafe_allow_html=True)
 
-    # BOTÓN PDF (Debe estar instalado fpdf2 en requirements.txt)
+    # BOTÓN PDF CORREGIDO
     try:
-        pdf_bytes = generar_pdf(datos, st.session_state.semana_activa, porcentaje, mensaje)
+        pdf_output = generar_pdf(datos, st.session_state.semana_activa, porcentaje, mensaje)
+        
+        # IMPORTANTE: Convertir a bytes de forma segura para Streamlit
         st.download_button(
             label="📥 DESCARGAR REPORTE PDF", 
-            data=pdf_bytes, 
+            data=bytes(pdf_output), # Forzamos la conversión a bytes
             file_name=f"Reporte_{datos.get('PATERNO','')}.pdf", 
             mime="application/pdf"
         )
     except Exception as e:
-        st.error("Error al generar PDF. Asegúrate de tener 'fpdf2' en requirements.txt")
+        st.error(f"Error técnico al generar el archivo. Por favor reportar: {e}")
     
     if st.button("⬅️ NUEVA CONSULTA"):
         st.session_state.pantalla = 'matricula'
