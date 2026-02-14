@@ -7,10 +7,11 @@ from fpdf import FPDF
 # 1. CONFIGURACIÓN E INTERFAZ
 st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
 
-# --- MEMORIA DEL SISTEMA ---
+# --- MEMORIA ROBUSTA ---
 if 'pantalla' not in st.session_state: st.session_state.pantalla = 'inicio'
 if 'semana_activa' not in st.session_state: st.session_state.semana_activa = None
-if 'matricula_guardada' not in st.session_state: st.session_state.matricula_guardada = ""
+# Usamos una clave diferente para asegurar que la matrícula NUNCA se borre sola
+if 'ID_USUARIO' not in st.session_state: st.session_state.ID_USUARIO = ""
 if 'alumno_datos' not in st.session_state: st.session_state.alumno_datos = None
 
 URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
@@ -25,16 +26,12 @@ st.markdown(f"""
         background-attachment: fixed !important;
     }}
     h1, h2, h3, p, label, span, div {{ color: black !important; -webkit-text-fill-color: black !important; }}
-    
-    /* Botones vibrantes */
     div.stButton > button {{
-        width: 100% !important; height: 55px !important;
+        width: 100% !important; height: 50px !important;
         border-radius: 12px !important; font-weight: 900 !important;
-        color: white !important; text-transform: uppercase !important; border: none !important;
+        color: white !important; border: none !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
     }}
-    
-    /* Contenedor de tabla */
     .tabla-container {{
         background: white; padding: 15px; border-radius: 15px; 
         border: 2px solid #1D3557; margin-top: 15px;
@@ -42,7 +39,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. FUNCIONES DE LÓGICA
+# 2. FUNCIONES
 def procesar_valor(val):
     v_str = str(val).strip().upper()
     if v_str in ['NAN', '', '0', '0.0', 'FALSE', 'FALSO']: return "❌ Pendiente"
@@ -86,12 +83,11 @@ def generar_pdf(datos_alumno, semana, porcentaje):
 
 listado_hojas = obtener_nombres_hojas(SHEET_ID)
 
-# --- PANTALLA 1: INICIO (SELECCIÓN INICIAL) ---
+# --- PANTALLA 1: INICIO ---
 if st.session_state.pantalla == 'inicio':
     st.title("🏫 Portal Escolar 6° B")
-    st.markdown("### Selecciona la semana para empezar:")
+    st.markdown("### Selecciona la semana:")
     colores = ["#E63946", "#457B9D", "#2A9D8F", "#F4A261", "#8338EC"]
-    
     for i in range(0, len(listado_hojas), 2):
         cols = st.columns(2)
         for j in range(2):
@@ -105,81 +101,72 @@ if st.session_state.pantalla == 'inicio':
                         st.session_state.pantalla = 'matricula'
                         st.rerun()
 
-# --- PANTALLA 2: CAPTURA DE MATRÍCULA ---
+# --- PANTALLA 2: MATRÍCULA ---
 elif st.session_state.pantalla == 'matricula':
     st.title(f"📍 {st.session_state.semana_activa}")
-    mat_input = st.text_input("Ingresa la matrícula del alumno:", value=st.session_state.matricula_guardada)
+    # Nota: cargamos el valor desde ID_USUARIO para que nunca se pierda
+    mat_input = st.text_input("Ingresa la matrícula del alumno:", value=st.session_state.ID_USUARIO)
     
     if st.button("🔍 VER REPORTE"):
         if mat_input:
-            st.session_state.matricula_guardada = mat_input.strip()
+            st.session_state.ID_USUARIO = mat_input.strip() # Guardar en memoria permanente
             df = cargar_datos(st.session_state.semana_activa)
             df.columns = [str(col).strip() for col in df.columns]
             col_mat = [c for c in df.columns if "MATRICULA" in c.upper()]
             if col_mat:
                 df['BUSCAR'] = df[col_mat[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
-                fila = df[df['BUSCAR'] == st.session_state.matricula_guardada]
+                fila = df[df['BUSCAR'] == st.session_state.ID_USUARIO]
                 if not fila.empty:
                     st.session_state.alumno_datos = fila.iloc[0].to_dict()
                     st.session_state.pantalla = 'resultados'
                     st.rerun()
-                else: st.error("❌ No encontramos esa matrícula en esta semana.")
+                else: st.error("❌ Matrícula no encontrada.")
 
-# --- PANTALLA 3: RESULTADOS (CON NAVEGACIÓN RÁPIDA) ---
+# --- PANTALLA 3: RESULTADOS ---
 elif st.session_state.pantalla == 'resultados':
-    # Encabezado con Nombre
-    st.subheader(f"👤 {st.session_state.alumno_datos.get('NOMBRE', '')} {st.session_state.alumno_datos.get('PATERNO', '')}")
+    datos = st.session_state.alumno_datos
+    st.subheader(f"👤 {datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}")
     
-    # --- MENÚ DESPLEGABLE DE SEMANAS (Sustituye a volver a inicio) ---
-    st.markdown("#### 📅 Cambiar de semana:")
+    # --- MENÚ DESPLEGABLE ---
+    st.markdown("#### 📅 Ver otra semana de este alumno:")
     idx_s = listado_hojas.index(st.session_state.semana_activa)
-    nueva_s = st.selectbox("Selecciona otra semana para ver los resultados del mismo alumno:", listado_hojas, index=idx_s, label_visibility="collapsed")
+    # Al cambiar aquí, el sistema usa session_state.ID_USUARIO automáticamente
+    nueva_s = st.selectbox("Semana:", listado_hojas, index=idx_s, label_visibility="collapsed")
     
-    # Si el usuario cambia la semana en el desplegable
     if nueva_s != st.session_state.semana_activa:
         st.session_state.semana_activa = nueva_s
-        with st.spinner('Actualizando reporte...'):
-            df_n = cargar_datos(nueva_s)
-            df_n.columns = [str(col).strip() for col in df_n.columns]
-            col_m = [c for c in df_n.columns if "MATRICULA" in c.upper()]
-            df_n['BUSCAR'] = df_n[col_m[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
-            fila = df_n[df_n['BUSCAR'] == st.session_state.matricula_guardada]
-            if not fila.empty:
-                st.session_state.alumno_datos = fila.iloc[0].to_dict()
-                st.rerun()
-            else:
-                st.warning(f"La matrícula {st.session_state.matricula_guardada} no tiene registros en la {nueva_s}.")
+        df_n = cargar_datos(nueva_s)
+        df_n.columns = [str(col).strip() for col in df_n.columns]
+        col_m = [c for c in df_n.columns if "MATRICULA" in c.upper()]
+        df_n['BUSCAR'] = df_n[col_m[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
+        fila = df_n[df_n['BUSCAR'] == st.session_state.ID_USUARIO]
+        if not fila.empty:
+            st.session_state.alumno_datos = fila.iloc[0].to_dict()
+            st.rerun()
 
-    # Datos actuales
-    datos = st.session_state.alumno_datos
+    # Procesar tabla
     omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']
     res_f = {k: v for k, v in datos.items() if k.upper() not in omitir}
-    
-    # Barra de Progreso
-    total = len(res_f)
     entregas = sum(1 for v in res_f.values() if str(v).strip() not in ['0', '0.0', 'nan', '', 'False'])
-    porc = int((entregas / total) * 100) if total > 0 else 0
+    porc = int((entregas / len(res_f)) * 100) if len(res_f) > 0 else 0
     color_p = "#E63946" if porc < 50 else "#F4A261" if porc < 80 else "#2A9D8F"
 
     st.markdown(f'**Progreso: {porc}%**')
     st.markdown(f'<div style="width:100%; background:#e0e0e0; border-radius:10px; height:18px;"><div style="width:{porc}%; background:{color_p}; height:18px; border-radius:10px;"></div></div>', unsafe_allow_html=True)
     
-    # Tabla de Resultados
     df_res = pd.DataFrame(res_f.items(), columns=["Actividad", "Estado"])
     df_res["Estado"] = df_res["Estado"].apply(procesar_valor)
-    
     filas = "".join([f'<tr><td style="border:1px solid #ddd; padding:8px;">{r["Actividad"]}</td><td style="border:1px solid #ddd; padding:8px; font-weight:bold;">{r["Estado"]}</td></tr>' for _, r in df_res.iterrows()])
     st.markdown(f'<div class="tabla-container"><table style="width:100%; border-collapse:collapse; color:black;"><tr style="background:#eee;"><th>Actividad</th><th>Estado</th></tr>{filas}</table></div>', unsafe_allow_html=True)
 
     st.markdown("---")
-    
-    # Botones de Acción
-    c1, c2 = st.columns(2)
-    with c1:
+    col1, col2 = st.columns(2)
+    with col1:
         pdf_b = generar_pdf(datos, st.session_state.semana_activa, porc)
-        st.download_button("📥 DESCARGAR PDF", data=pdf_b, file_name=f"Reporte_{datos.get('PATERNO','')}_{st.session_state.semana_activa}.pdf", mime="application/pdf")
-    with c2:
-        if st.button("🔄 CAMBIAR MATRÍCULA"):
+        st.download_button("📥 PDF", data=pdf_b, file_name=f"Reporte_{datos.get('PATERNO','')}.pdf", mime="application/pdf")
+    with col2:
+        # Este botón ahora se usa solo para resetear y ver a OTRA persona
+        if st.button("👥 OTRO ALUMNO"):
             st.session_state.pantalla = 'inicio'
-            st.session_state.matricula_guardada = "" # Borramos solo si quieren cambiar de usuario
+            # No borramos ID_USUARIO para que si se equivocaron, solo tengan que darle a "Consultar"
             st.rerun()
