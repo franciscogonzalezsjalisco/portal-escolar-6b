@@ -18,8 +18,8 @@ SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
 URL_LOG_SCRIPT = "https://script.google.com/macros/s/AKfycbwNGbSsky_dCyzvhf0WGfWj0mJMxR74Jrz2jmpIkJYLUDsH07cTCQjgbKO2E-TlaN_G/exec"
 
 if 'pantalla' not in st.session_state: st.session_state.pantalla = 'inicio'
-if 'semana_activa' not in st.session_state: st.session_state.semana_activa = None
 if 'usuario' not in st.session_state: st.session_state.usuario = None
+if 'ID_USUARIO' not in st.session_state: st.session_state.ID_USUARIO = ""
 
 # 2. --- ESTILOS DE DISEÑO ---
 st.markdown(f"""
@@ -77,8 +77,6 @@ st.markdown(f"""
         font-weight: bold;
         border-top: 1px solid #1D3557;
     }}
-    </style>
-    """, unsafe_allow_html=True)
 
 # 3. --- ENCABEZADO PRINCIPAL (LOGO Y TÍTULO) ---
 col1, col2, col3 = st.columns([1, 2, 1])
@@ -202,7 +200,7 @@ elif st.session_state.pantalla == 'matricula':
     st.markdown(f"<h4 style='text-align: center;'>📍 {st.session_state.semana_activa}</h4>", unsafe_allow_html=True)
     mat_in = st.text_input("Matrícula:", value=st.session_state.ID_USUARIO)
     if st.button("🔍 VER REPORTE"):
-        if mat_in:
+        if mat_in = st.text_input("Matrícula:", value=st.session_state.get('ID_USUARIO', ""))
             st.session_state.ID_USUARIO = mat_in.strip()
             df = cargar_datos(st.session_state.semana_activa)
             df.columns = [str(c).strip() for c in df.columns]
