@@ -172,23 +172,30 @@ if st.session_state.pantalla == 'inicio':
             sem_m = st.selectbox("Semana para reporte grupal:", listado_hojas)
         if st.button("🚀 GENERAR PDF GRUPAL"):
                 with st.spinner("Generando todas las hojas..."):
-                    df_m = cargar_datos(sem_m)  # <--- ASEGÚRATE QUE TENGA EL ) AL FINAL
+                    df_m = cargar_datos(sem_m)
                     pdf_m = FPDF()
                     for _, f in df_m.iterrows(): 
                         crear_hoja_alumno_pdf(pdf_m, f.to_dict(), sem_m, es_grupal=True)
                     
-                    # Procesa la salida del PDF
-                    pdf_output = pdf_m.output()
-                    pdf_bytes = pdf_output.encode('latin-1') if isinstance(pdf_output, str) else pdf_output
-                    
-                    st.download_button(
-                        label=f"📥 Descargar {sem_m}", 
-                        data=pdf_bytes, 
-                        file_name=f"Grupo_6B_{sem_m}.pdf",
-                        mime="application/pdf"
-                    )
-                    # REGISTRO DEL MAESTRO
-                    registrar_en_bitacora("MAESTRO", NOMBRE_MAESTRO, sem_m, "Descarga Masiva")
+                    # MÉTODO COMPATIBLE CON TODAS LAS VERSIONES DE FPDF2
+                    try:
+                        # Obtenemos los bytes directamente
+                        pdf_bytes = bytes(pdf_m.output()) 
+                    except:
+                        # Si falla lo anterior, usamos el método alternativo
+                        pdf_bytes = pdf_m.output(dest='S').encode('latin-1') if hasattr(pdf_m, 'output') else b""
+
+                    if pdf_bytes:
+                        st.download_button(
+                            label=f"📥 Descargar {sem_m}", 
+                            data=pdf_bytes, 
+                            file_name=f"Grupo_6B_{sem_m}.pdf",
+                            mime="application/pdf"
+                        )
+                        # REGISTRO DEL MAESTRO
+                        registrar_en_bitacora("MAESTRO", NOMBRE_MAESTRO, sem_m, "Descarga Masiva")
+                    else:
+                        st.error("No se pudo generar el archivo PDF.")
                     
 elif st.session_state.pantalla == 'matricula':
     st.markdown(f"<h4 style='text-align: center;'>📍 {st.session_state.semana_activa}</h4>", unsafe_allow_html=True)
