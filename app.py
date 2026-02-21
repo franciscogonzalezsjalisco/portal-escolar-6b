@@ -8,7 +8,7 @@ from urllib.parse import quote
 import time
 
 # 1. CONFIGURACIÓN E IDENTIDAD
-st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
+st.set_page_config(page_title="Portal Escolar 6°B Urb. 690", layout="centered")
 
 NOMBRE_MAESTRO = "Profr. Francisco González"
 PASS_MAESTRO = "6B2024" 
