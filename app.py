@@ -4,62 +4,93 @@ import time
 from urllib.parse import quote
 from fpdf import FPDF
 
-# 1. CONFIGURACIÓN E IDENTIDAD
-st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
+# 1. CONFIGURACIÓN E IDENTIDAD INSTITUCIONAL
+st.set_page_config(page_title="Portal Escolar 6°B U.690", layout="centered")
 
-# --- VARIABLES PERSONALIZABLES ---
-NOMBRE_MAESTRO = "Profr. Francisco Gmo. González S."
-URL_ESCUDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/ESCUDO 690 (1).png"
+# --- VARIABLES DE PERSONALIZACIÓN ---
+NOMBRE_MAESTRO = "Profr. Francisco González"
+URL_ESCUDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/ESCUDO%20690%20(1).png"
 URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
 
-# --- MEMORIA ROBUSTA ---
+# --- MEMORIA DEL SISTEMA ---
 if 'pantalla' not in st.session_state: st.session_state.pantalla = 'inicio'
 if 'semana_activa' not in st.session_state: st.session_state.semana_activa = None
 if 'ID_USUARIO' not in st.session_state: st.session_state.ID_USUARIO = ""
 if 'alumno_datos' not in st.session_state: st.session_state.alumno_datos = None
 
-# 2. DISEÑO Y ESTILOS
+# 2. ESTILOS VISUALES (FORZADO ANTI MODO OSCURO)
 st.markdown(f"""
     <style>
+    /* Fondo General */
     .stApp {{
-        background: white !important;
-        background: linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)), url("{URL_FONDO}") !important;
+        background-color: white !important;
+        background: linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url("{URL_FONDO}") !important;
         background-size: cover !important;
-        background-attachment: fixed !important;
     }}
-    .header-maestro {{
+
+    /* Forzar color de texto global a Azul Marino/Negro */
+    h1, h2, h3, h4, p, label, span, div, .stSelectbox p {{ 
+        color: #1D3557 !important; 
+    }}
+
+    /* Banner del Maestro */
+    .banner-maestro {{
         text-align: center;
-        background: rgba(29, 53, 87, 0.9);
+        background: #1D3557;
         color: white !important;
-        padding: 10px;
-        border-radius: 0 0 15px 15px;
-        margin-top: -60px;
+        padding: 15px;
+        border-radius: 12px;
         margin-bottom: 20px;
         font-weight: bold;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }}
-    h1, h2, h3, p, label, span, div {{ color: black !important; }}
+    .banner-maestro span {{ color: white !important; }}
+
+    /* BOTONES DE SEMANAS (Fondo Blanco, Letras Azul Marino) */
     div.stButton > button {{
-        width: 100% !important; height: 50px !important;
-        border-radius: 12px !important; font-weight: 900 !important;
-        color: white !important; border: none !important;
+        background-color: white !important;
+        color: #1D3557 !important;
+        border: 2px solid #1D3557 !important;
+        width: 100% !important;
+        height: 60px !important;
+        border-radius: 12px !important;
+        font-weight: 900 !important;
+        font-size: 16px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+        transition: 0.3s;
     }}
+    
+    /* Efecto al pasar el mouse por los botones */
+    div.stButton > button:hover {{
+        background-color: #f0f4f8 !important;
+        border-color: #457B9D !important;
+    }}
+
+    /* Estilo de la tabla de resultados */
     .tabla-container {{
         background: white; padding: 15px; border-radius: 15px; 
         border: 2px solid #1D3557; margin-top: 15px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }}
+    
+    /* Input de matrícula */
+    .stTextInput input {{
+        background-color: white !important;
+        color: black !important;
+        border: 1px solid #1D3557 !important;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-# Encabezado institucional presente en todas las pantallas
-st.markdown(f'<div class="header-maestro">🏫 {NOMBRE_MAESTRO} - 6° Grado Grupo "B"</div>', unsafe_allow_html=True)
+# Encabezado Institucional
+st.markdown(f'<div class="banner-maestro">🏫 {NOMBRE_MAESTRO} <br> <span style="font-size: 0.9rem;">Portal de Seguimiento - 6° B</span></div>', unsafe_allow_html=True)
 
-col_esc1, col_esc2, col_esc3 = st.columns([1, 1, 1])
-with col_esc2:
-    st.image(URL_ESCUDO, width=120) # Ajusta el ancho según necesites
+# Escudo
+c1, c2, c3 = st.columns([1, 0.6, 1])
+with c2:
+    st.image(URL_ESCUDO, use_container_width=True)
 
-# 3. FUNCIONES LÓGICAS
+# 3. FUNCIONES TÉCNICAS
 def procesar_valor(val):
     v_str = str(val).strip().upper()
     if v_str in ['NAN', '', '0', '0.0', 'FALSE', 'FALSO']: return "❌ Pendiente"
@@ -106,8 +137,9 @@ listado_hojas = obtener_nombres_hojas(SHEET_ID)
 # --- FLUJO DE PANTALLAS ---
 
 if st.session_state.pantalla == 'inicio':
-    st.markdown("<h2 style='text-align: center;'>Selecciona la semana de consulta</h2>", unsafe_allow_html=True)
-    colores = ["#E63946", "#457B9D", "#2A9D8F", "#F4A261", "#8338EC"]
+    st.markdown("<h3 style='text-align: center;'>Selecciona la semana de consulta</h3>", unsafe_allow_html=True)
+    
+    # Grid de botones (Ahora todos Blancos con borde Azul)
     for i in range(0, len(listado_hojas), 2):
         cols = st.columns(2)
         for j in range(2):
@@ -115,42 +147,43 @@ if st.session_state.pantalla == 'inicio':
             if idx < len(listado_hojas):
                 nombre_h = listado_hojas[idx]
                 with cols[j]:
-                    st.markdown(f'<style>button[key="btn_{idx}"] {{ background-color: {colores[idx % 5]} !important; }}</style>', unsafe_allow_html=True)
                     if st.button(nombre_h, key=f"btn_{idx}"):
                         st.session_state.semana_activa = nombre_h
                         st.session_state.pantalla = 'matricula'
                         st.rerun()
 
 elif st.session_state.pantalla == 'matricula':
-    st.markdown(f"<h3 style='text-align: center;'>📍 {st.session_state.semana_activa}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h4 style='text-align: center;'>📍 Semana: {st.session_state.semana_activa}</h4>", unsafe_allow_html=True)
     mat_input = st.text_input("Ingresa la matrícula del alumno:", value=st.session_state.ID_USUARIO)
     
-    if st.button("🔍 VER REPORTE"):
+    # Botón de consulta (Mismo estilo para consistencia)
+    if st.button("🔍 CONSULTAR REPORTE"):
         if mat_input:
             st.session_state.ID_USUARIO = mat_input.strip()
-            df = cargar_datos(st.session_state.semana_activa)
-            df.columns = [str(col).strip() for col in df.columns]
-            col_mat = [c for c in df.columns if "MATRICULA" in c.upper()]
-            if col_mat:
-                df['BUSCAR'] = df[col_mat[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
-                fila = df[df['BUSCAR'] == st.session_state.ID_USUARIO]
-                if not fila.empty:
-                    st.session_state.alumno_datos = fila.iloc[0].to_dict()
-                    st.session_state.pantalla = 'resultados'
-                    st.rerun()
-                else: st.error("❌ Matrícula no encontrada.")
-    
-    if st.button("⬅️ VOLVER"):
+            with st.spinner('Buscando registros...'):
+                df = cargar_datos(st.session_state.semana_activa)
+                df.columns = [str(col).strip() for col in df.columns]
+                col_mat = [c for c in df.columns if "MATRICULA" in c.upper()]
+                if col_mat:
+                    df['BUSCAR'] = df[col_mat[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
+                    fila = df[df['BUSCAR'] == st.session_state.ID_USUARIO]
+                    if not fila.empty:
+                        st.session_state.alumno_datos = fila.iloc[0].to_dict()
+                        st.session_state.pantalla = 'resultados'
+                        st.rerun()
+                    else: st.error("❌ No se encontró la matrícula.")
+
+    if st.button("⬅️ VOLVER AL LISTADO"):
         st.session_state.pantalla = 'inicio'
         st.rerun()
 
 elif st.session_state.pantalla == 'resultados':
     datos = st.session_state.alumno_datos
-    st.success(f"🎓 **ALUMNO:** {datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}")
+    st.markdown(f"#### 🎓 Alumno: {datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}")
     
-    # Menú desplegable para navegación rápida
+    # Navegador rápido
     idx_s = listado_hojas.index(st.session_state.semana_activa)
-    nueva_s = st.selectbox("📅 **Cambiar semana de este alumno:**", listado_hojas, index=idx_s)
+    nueva_s = st.selectbox("📅 **Ver otra semana:**", listado_hojas, index=idx_s)
     
     if nueva_s != st.session_state.semana_activa:
         st.session_state.semana_activa = nueva_s
@@ -163,12 +196,11 @@ elif st.session_state.pantalla == 'resultados':
             st.session_state.alumno_datos = fila.iloc[0].to_dict()
             st.rerun()
 
-    # Procesar tabla y porcentaje
-    omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']
-    res_f = {k: v for k, v in datos.items() if k.upper() not in omitir}
+    # Tabla y Progreso
+    res_f = {k: v for k, v in datos.items() if k.upper() not in ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']}
     entregas = sum(1 for v in res_f.values() if str(v).strip() not in ['0', '0.0', 'nan', '', 'False'])
     porc = int((entregas / len(res_f)) * 100) if len(res_f) > 0 else 0
-    color_p = "#E63946" if porc < 50 else "#F4A261" if porc < 80 else "#2A9D8F"
+    color_p = "#1D3557" # Azul Marino para la barra
 
     st.markdown(f'**Cumplimiento: {porc}%**')
     st.markdown(f'<div style="width:100%; background:#e0e0e0; border-radius:10px; height:18px;"><div style="width:{porc}%; background:{color_p}; height:18px; border-radius:10px;"></div></div>', unsafe_allow_html=True)
@@ -179,11 +211,11 @@ elif st.session_state.pantalla == 'resultados':
     st.markdown(f'<div class="tabla-container"><table style="width:100%; border-collapse:collapse; color:black;"><tr style="background:#eee;"><th>Actividad</th><th>Estado</th></tr>{filas}</table></div>', unsafe_allow_html=True)
 
     st.markdown("---")
-    col1, col2 = st.columns(2)
-    with col1:
+    c1, c2 = st.columns(2)
+    with c1:
         pdf_b = generar_pdf(datos, st.session_state.semana_activa, porc)
         st.download_button("📥 DESCARGAR PDF", data=pdf_b, file_name=f"Reporte_{datos.get('PATERNO','')}.pdf", mime="application/pdf")
-    with col2:
+    with c2:
         if st.button("👥 OTRO ALUMNO"):
             st.session_state.pantalla = 'inicio'
             st.rerun()
