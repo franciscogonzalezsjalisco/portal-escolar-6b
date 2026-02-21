@@ -5,6 +5,7 @@ import requests
 from datetime import datetime
 import pytz
 from urllib.parse import quote
+import time
 
 # 1. CONFIGURACIÓN E IDENTIDAD
 st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
