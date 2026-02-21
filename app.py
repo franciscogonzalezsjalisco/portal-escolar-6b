@@ -19,23 +19,19 @@ URL_LOG_SCRIPT = "https://script.google.com/macros/s/AKfycbwNGbSsky_dCyzvhf0WGfW
 
 if 'pantalla' not in st.session_state: st.session_state.pantalla = 'inicio'
 if 'semana_activa' not in st.session_state: st.session_state.semana_activa = None
-if 'ID_USUARIO' not in st.session_state: st.session_state.ID_USUARIO = ""
-if 'alumno_datos' not in st.session_state: st.session_state.alumno_datos = None
+if 'usuario' not in st.session_state: st.session_state.usuario = None
 
 # 2. --- ESTILOS DE DISEÑO ---
 st.markdown(f"""
     <style>
-    /* 1. FONDO GENERAL */
     .stApp {{ 
         background-color: white !important; 
         background: linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url("{URL_FONDO}"); 
         background-size: cover; 
     }}
     
-    /* 2. TEXTOS GENERALES (AZUL MARINO) */
-    h1, h2, h3, h4, p, label, span, div {{ color: #1D3557; font-family: 'Segoe UI', sans-serif; }}
+    h1, h2, h3, h4, p, label {{ color: #1D3557 !important; font-family: 'Segoe UI', sans-serif; }}
 
-    /* 3. BANNER DEL ALUMNO (FONDO AZUL, LETRAS BLANCAS) */
     .banner-maestro {{ 
         text-align: center; 
         background-color: #1D3557 !important; 
@@ -44,18 +40,17 @@ st.markdown(f"""
         margin-bottom: 25px; 
         box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
     }}
+    
     .banner-maestro h2, .banner-maestro h3, .banner-maestro p {{
         color: #FFFFFF !important;
         margin: 5px 0px !important;
     }}
 
-    /* 4. SELECTBOX (MENÚ DE SEMANAS) */
     div[data-baseweb="select"] {{
         border: 2px solid #1D3557 !important;
         border-radius: 12px !important;
     }}
     
-    /* 5. BOTONES */
     div.stButton > button {{ 
         background-color: white !important; 
         color: #1D3557 !important; 
@@ -64,7 +59,6 @@ st.markdown(f"""
         font-weight: bold; 
     }}
 
-    /* 6. PANEL DEL MAESTRO (AZUL CLARO) */
     .streamlit-expanderHeader {{
         background-color: #F1F4F9 !important;
         border: 1px solid #1D3557 !important;
@@ -72,6 +66,14 @@ st.markdown(f"""
     }}
     </style>
     """, unsafe_allow_html=True)
+
+# 3. --- ENCABEZADO PRINCIPAL (LOGO Y TÍTULO) ---
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    st.image(URL_ESCUDO, width=150)
+st.markdown("<h2 style='text-align: center;'>URBANIZADA 690</h2>", unsafe_allow_html=True)
+st.markdown("<h4 style='text-align: center; color: #457B9D !important;'>6° Grado Grupo B</h4>", unsafe_allow_html=True)
+st.markdown("---")
     
 # 3. FUNCIONES
 def registrar_en_bitacora(matricula, nombre, semana, accion):
