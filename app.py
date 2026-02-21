@@ -37,21 +37,22 @@ st.markdown(f'<div class="banner-maestro">🏫 {NOMBRE_MAESTRO} <br> <span style
 
 # 3. FUNCIONES
 def registrar_en_bitacora(matricula, nombre, semana, accion):
-    """Envía los datos a la bitácora usando el método GET verificado"""
     try:
-        params = {
-            "fecha": datetime.now(pytz.timezone('America/Mexico_City')).strftime("%d/%m/%Y %H:%M:%S"),
-            "matricula": str(matricula),
-            "nombre": str(nombre),
-            "semana": str(semana),
-            "accion": str(accion)
-        }
-        # Usamos requests.get porque es el que dio "Éxito" en la prueba del navegador
-        requests.get(URL_LOG_SCRIPT, params=params, timeout=5)
-        st.toast(f"Bitácora: {accion} registrado", icon="✅")
-    except:
-        # Si falla el internet, la app sigue funcionando normalmente
-        pass
+        # Construimos la URL igual que en la prueba del navegador
+        ts = datetime.now(pytz.timezone('America/Mexico_City')).strftime("%d/%m/%Y %H:%M:%S")
+        url_completa = (
+            f"{URL_LOG_SCRIPT}?fecha={quote(ts)}&"
+            f"matricula={quote(str(matricula))}&"
+            f"nombre={quote(str(nombre))}&"
+            f"semana={quote(str(semana))}&"
+            f"accion={quote(str(accion))}"
+        )
+        # Enviamos la solicitud ignorando la respuesta para no frenar la app
+        requests.get(url_completa, timeout=5)
+        st.toast(f"Registrado: {accion}", icon="📝")
+    except Exception as e:
+        print(f"Error bitácora: {e}")
+        
 def procesar_valor(val):
     v_str = str(val).strip().upper()
     if v_str in ['NAN', '', '0', '0.0', 'FALSE', 'FALSO']: return "❌ Pendiente"
@@ -110,7 +111,7 @@ if st.session_state.pantalla == 'inicio':
                     st.session_state.semana_activa = listado_hojas[idx]
                     st.session_state.pantalla = 'matricula'; st.rerun()
     
-    st.markdown("---")
+    st.markdown("---") #
     with st.expander("🔐 Acceso Maestro"):
         pw = st.text_input("Contraseña:", type="password")
         if pw == PASS_MAESTRO:
@@ -119,9 +120,20 @@ if st.session_state.pantalla == 'inicio':
                 with st.spinner("Generando todas las hojas..."):
                     df_m = cargar_datos(sem_m)
                     pdf_m = FPDF()
-                    for _, f in df_m.iterrows(): crear_hoja_alumno_pdf(pdf_m, f.to_dict(), sem_m, True)
-                    st.download_button(f"📥 Descargar {sem_m}", data=bytes(pdf_m.output()), file_name=f"Grupo_6B_{sem_m}.pdf")
-
+                    # Recorremos cada fila del Excel para crear una hoja por alumno
+                    for _, f in df_m.iterrows(): 
+                        crear_hoja_alumno_pdf(pdf_m, f.to_dict(), sem_m, es_grupal=True)
+                    
+                    # Generamos el archivo para descarga
+                    pdf_bytes = pdf_m.output(dest='S').encode('latin-1')
+                    st.download_button(
+                        f"📥 Descargar {sem_m}", 
+                        data=pdf_bytes, 
+                        file_name=f"Grupo_6B_{sem_m}.pdf",
+                        mime="application/pdf"
+                    )
+                    # REGISTRO DE TU ACTIVIDAD EN LA BITÁCORA
+                    registrar_en_bitacora("MAESTRO", NOMBRE_MAESTRO, sem_m, "Descarga Masiva")
 elif st.session_state.pantalla == 'matricula':
     st.markdown(f"<h4 style='text-align: center;'>📍 {st.session_state.semana_activa}</h4>", unsafe_allow_html=True)
     mat_in = st.text_input("Matrícula:", value=st.session_state.ID_USUARIO)
