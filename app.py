@@ -64,23 +64,19 @@ st.markdown(f"""
         border: 1px solid #1D3557 !important;
         border-radius: 10px !important;
     }}
-    </style>
-    """, unsafe_allow_html=True)
-    /* Estilo para la firma en el pie de página */
-    .footer {
+   .footer {{
         position: fixed;
         left: 0;
         bottom: 0;
         width: 100%;
-        background-color: rgba(255, 255, 255, 0.8); /* Fondo semi-transparente */
+        background-color: rgba(255, 255, 255, 0.9);
         color: #1D3557;
         text-align: center;
-        padding: 10px;
-        font-size: 14px;
+        padding: 5px;
+        font-size: 12px;
         font-weight: bold;
         border-top: 1px solid #1D3557;
-        z-index: 100;
-    }
+    }}
 
 # 3. --- ENCABEZADO PRINCIPAL (LOGO Y TÍTULO) ---
 col1, col2, col3 = st.columns([1, 2, 1])
