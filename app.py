@@ -4,19 +4,22 @@ import time
 from urllib.parse import quote
 from fpdf import FPDF
 
-# 1. CONFIGURACIÓN E INTERFAZ
+# 1. CONFIGURACIÓN E IDENTIDAD
 st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
+
+# --- VARIABLES PERSONALIZABLES ---
+NOMBRE_MAESTRO = "Profr. Francisco Gmo. González S."
+URL_ESCUDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png" # <--- Link de tu escudo
+URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
+SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
 
 # --- MEMORIA ROBUSTA ---
 if 'pantalla' not in st.session_state: st.session_state.pantalla = 'inicio'
 if 'semana_activa' not in st.session_state: st.session_state.semana_activa = None
-# Usamos una clave diferente para asegurar que la matrícula NUNCA se borre sola
 if 'ID_USUARIO' not in st.session_state: st.session_state.ID_USUARIO = ""
 if 'alumno_datos' not in st.session_state: st.session_state.alumno_datos = None
 
-URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
-SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
-
+# 2. DISEÑO Y ESTILOS
 st.markdown(f"""
     <style>
     .stApp {{
@@ -25,12 +28,22 @@ st.markdown(f"""
         background-size: cover !important;
         background-attachment: fixed !important;
     }}
-    h1, h2, h3, p, label, span, div {{ color: black !important; -webkit-text-fill-color: black !important; }}
+    .header-maestro {{
+        text-align: center;
+        background: rgba(29, 53, 87, 0.9);
+        color: white !important;
+        padding: 10px;
+        border-radius: 0 0 15px 15px;
+        margin-top: -60px;
+        margin-bottom: 20px;
+        font-weight: bold;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }}
+    h1, h2, h3, p, label, span, div {{ color: black !important; }}
     div.stButton > button {{
         width: 100% !important; height: 50px !important;
         border-radius: 12px !important; font-weight: 900 !important;
         color: white !important; border: none !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
     }}
     .tabla-container {{
         background: white; padding: 15px; border-radius: 15px; 
@@ -39,7 +52,14 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. FUNCIONES
+# Encabezado institucional presente en todas las pantallas
+st.markdown(f'<div class="header-maestro">🏫 {NOMBRE_MAESTRO} - 6° Grado Grupo "B"</div>', unsafe_allow_html=True)
+
+col_esc1, col_esc2, col_esc3 = st.columns([1, 1, 1])
+with col_esc2:
+    st.image(URL_ESCUDO, width=120) # Ajusta el ancho según necesites
+
+# 3. FUNCIONES LÓGICAS
 def procesar_valor(val):
     v_str = str(val).strip().upper()
     if v_str in ['NAN', '', '0', '0.0', 'FALSE', 'FALSO']: return "❌ Pendiente"
@@ -63,7 +83,7 @@ def generar_pdf(datos_alumno, semana, porcentaje):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 10, "REPORTE ESCOLAR - 6 B", ln=True, align="C")
+    pdf.cell(0, 10, f"REPORTE ESCOLAR - {NOMBRE_MAESTRO}", ln=True, align="C")
     pdf.ln(5)
     pdf.set_font("Helvetica", "", 12)
     pdf.cell(0, 10, f"Alumno: {datos_alumno.get('NOMBRE', '')} {datos_alumno.get('PATERNO', '')}", ln=True)
@@ -83,10 +103,10 @@ def generar_pdf(datos_alumno, semana, porcentaje):
 
 listado_hojas = obtener_nombres_hojas(SHEET_ID)
 
-# --- PANTALLA 1: INICIO ---
+# --- FLUJO DE PANTALLAS ---
+
 if st.session_state.pantalla == 'inicio':
-    st.title("🏫 Portal Escolar 6° B")
-    st.markdown("### Selecciona la semana:")
+    st.markdown("<h2 style='text-align: center;'>Selecciona la semana de consulta</h2>", unsafe_allow_html=True)
     colores = ["#E63946", "#457B9D", "#2A9D8F", "#F4A261", "#8338EC"]
     for i in range(0, len(listado_hojas), 2):
         cols = st.columns(2)
@@ -101,15 +121,13 @@ if st.session_state.pantalla == 'inicio':
                         st.session_state.pantalla = 'matricula'
                         st.rerun()
 
-# --- PANTALLA 2: MATRÍCULA ---
 elif st.session_state.pantalla == 'matricula':
-    st.title(f"📍 {st.session_state.semana_activa}")
-    # Nota: cargamos el valor desde ID_USUARIO para que nunca se pierda
+    st.markdown(f"<h3 style='text-align: center;'>📍 {st.session_state.semana_activa}</h3>", unsafe_allow_html=True)
     mat_input = st.text_input("Ingresa la matrícula del alumno:", value=st.session_state.ID_USUARIO)
     
     if st.button("🔍 VER REPORTE"):
         if mat_input:
-            st.session_state.ID_USUARIO = mat_input.strip() # Guardar en memoria permanente
+            st.session_state.ID_USUARIO = mat_input.strip()
             df = cargar_datos(st.session_state.semana_activa)
             df.columns = [str(col).strip() for col in df.columns]
             col_mat = [c for c in df.columns if "MATRICULA" in c.upper()]
@@ -121,17 +139,18 @@ elif st.session_state.pantalla == 'matricula':
                     st.session_state.pantalla = 'resultados'
                     st.rerun()
                 else: st.error("❌ Matrícula no encontrada.")
+    
+    if st.button("⬅️ VOLVER"):
+        st.session_state.pantalla = 'inicio'
+        st.rerun()
 
-# --- PANTALLA 3: RESULTADOS ---
 elif st.session_state.pantalla == 'resultados':
     datos = st.session_state.alumno_datos
-    st.subheader(f"👤 {datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}")
+    st.success(f"🎓 **ALUMNO:** {datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}")
     
-    # --- MENÚ DESPLEGABLE ---
-    st.markdown("#### 📅 Ver otra semana de este alumno:")
+    # Menú desplegable para navegación rápida
     idx_s = listado_hojas.index(st.session_state.semana_activa)
-    # Al cambiar aquí, el sistema usa session_state.ID_USUARIO automáticamente
-    nueva_s = st.selectbox("Semana:", listado_hojas, index=idx_s, label_visibility="collapsed")
+    nueva_s = st.selectbox("📅 **Cambiar semana de este alumno:**", listado_hojas, index=idx_s)
     
     if nueva_s != st.session_state.semana_activa:
         st.session_state.semana_activa = nueva_s
@@ -144,14 +163,14 @@ elif st.session_state.pantalla == 'resultados':
             st.session_state.alumno_datos = fila.iloc[0].to_dict()
             st.rerun()
 
-    # Procesar tabla
+    # Procesar tabla y porcentaje
     omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']
     res_f = {k: v for k, v in datos.items() if k.upper() not in omitir}
     entregas = sum(1 for v in res_f.values() if str(v).strip() not in ['0', '0.0', 'nan', '', 'False'])
     porc = int((entregas / len(res_f)) * 100) if len(res_f) > 0 else 0
     color_p = "#E63946" if porc < 50 else "#F4A261" if porc < 80 else "#2A9D8F"
 
-    st.markdown(f'**Progreso: {porc}%**')
+    st.markdown(f'**Cumplimiento: {porc}%**')
     st.markdown(f'<div style="width:100%; background:#e0e0e0; border-radius:10px; height:18px;"><div style="width:{porc}%; background:{color_p}; height:18px; border-radius:10px;"></div></div>', unsafe_allow_html=True)
     
     df_res = pd.DataFrame(res_f.items(), columns=["Actividad", "Estado"])
@@ -163,10 +182,8 @@ elif st.session_state.pantalla == 'resultados':
     col1, col2 = st.columns(2)
     with col1:
         pdf_b = generar_pdf(datos, st.session_state.semana_activa, porc)
-        st.download_button("📥 PDF", data=pdf_b, file_name=f"Reporte_{datos.get('PATERNO','')}.pdf", mime="application/pdf")
+        st.download_button("📥 DESCARGAR PDF", data=pdf_b, file_name=f"Reporte_{datos.get('PATERNO','')}.pdf", mime="application/pdf")
     with col2:
-        # Este botón ahora se usa solo para resetear y ver a OTRA persona
         if st.button("👥 OTRO ALUMNO"):
             st.session_state.pantalla = 'inicio'
-            # No borramos ID_USUARIO para que si se equivocaron, solo tengan que darle a "Consultar"
             st.rerun()
