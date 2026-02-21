@@ -66,6 +66,21 @@ st.markdown(f"""
     }}
     </style>
     """, unsafe_allow_html=True)
+    /* Estilo para la firma en el pie de página */
+    .footer {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: rgba(255, 255, 255, 0.8); /* Fondo semi-transparente */
+        color: #1D3557;
+        text-align: center;
+        padding: 10px;
+        font-size: 14px;
+        font-weight: bold;
+        border-top: 1px solid #1D3557;
+        z-index: 100;
+    }
 
 # 3. --- ENCABEZADO PRINCIPAL (LOGO Y TÍTULO) ---
 col1, col2, col3 = st.columns([1, 2, 1])
@@ -243,3 +258,6 @@ elif st.session_state.pantalla == 'resultados':
             registrar_en_bitacora(st.session_state.ID_USUARIO, nombre_c, st.session_state.semana_activa, "Descarga PDF")
     with c2:
         if st.button("👥 OTRO ALUMNO"): st.session_state.pantalla = 'inicio'; st.rerun()
+
+        # Firma fija en la parte inferior
+st.markdown(f'<div class="footer">{NOMBRE_MAESTRO}</div>', unsafe_allow_html=True)
