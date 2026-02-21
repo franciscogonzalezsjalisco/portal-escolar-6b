@@ -120,19 +120,15 @@ if st.session_state.pantalla == 'inicio':
         pw = st.text_input("Contraseña:", type="password")
         if pw == PASS_MAESTRO:
             sem_m = st.selectbox("Semana para reporte grupal:", listado_hojas)
-if st.button("🚀 GENERAR PDF GRUPAL"):
-    with st.spinner("Generando todas las hojas..."):
-        df_m = cargar_datos(sem_m
         if st.button("🚀 GENERAR PDF GRUPAL"):
                 with st.spinner("Generando todas las hojas..."):
-                    df_m = cargar_datos(sem_m)
+                    df_m = cargar_datos(sem_m)  # <--- ASEGÚRATE QUE TENGA EL ) AL FINAL
                     pdf_m = FPDF()
                     for _, f in df_m.iterrows(): 
                         crear_hoja_alumno_pdf(pdf_m, f.to_dict(), sem_m, es_grupal=True)
                     
-                    # CORRECCIÓN DE ERROR DE BYTES
+                    # Procesa la salida del PDF
                     pdf_output = pdf_m.output()
-                    # Si el output es una cadena, la convertimos; si ya son bytes, se queda igual
                     pdf_bytes = pdf_output.encode('latin-1') if isinstance(pdf_output, str) else pdf_output
                     
                     st.download_button(
