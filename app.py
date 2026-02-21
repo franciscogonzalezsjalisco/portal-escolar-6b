@@ -22,7 +22,7 @@ if 'semana_activa' not in st.session_state: st.session_state.semana_activa = Non
 if 'ID_USUARIO' not in st.session_state: st.session_state.ID_USUARIO = ""
 if 'alumno_datos' not in st.session_state: st.session_state.alumno_datos = None
 
-# --- ESTILOS DE DISEÑO ---
+# 2. --- ESTILOS DE DISEÑO ---
 st.markdown(f"""
     <style>
     /* 1. FONDO GENERAL */
