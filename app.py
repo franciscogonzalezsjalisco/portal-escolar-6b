@@ -11,7 +11,11 @@ import time
 st.set_page_config(page_title="Portal Escolar 6°B Urb. 690", layout="centered")
 
 NOMBRE_MAESTRO = "Profr. Francisco González"
-PASS_MAESTRO = "6B2024" 
+
+# MEJORA 1: Seguridad de la contraseña usando st.secrets (con un valor por defecto si no está configurado)
+# Para desarrollo local, crea un archivo en .streamlit/secrets.toml con: PASS_MAESTRO = "TuContraseñaSegura"
+PASS_MAESTRO = st.secrets.get("PASS_MAESTRO", "6B2026") 
+
 URL_ESCUDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/ESCUDO%20690%20(1).png"
 URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
@@ -93,7 +97,9 @@ def registrar_en_bitacora(matricula, nombre, semana, accion):
         headers = {"User-Agent": "Mozilla/5.0"}
         requests.get(URL_LOG_SCRIPT, params=params, headers=headers, timeout=10)
         st.toast(f"Registro: {accion}", icon="✅")
-    except: pass
+    except Exception as e:
+        # MEJORA 2: Manejo de errores no silencioso
+        print(f"Error al registrar en bitácora: {e}")
 
 def procesar_valor(val):
     v_str = str(val).strip().upper()
@@ -101,28 +107,45 @@ def procesar_valor(val):
     if v_str in ['1', '1.0', 'TRUE', 'VERDADERO']: return "✅ Completado"
     return str(val)
 
+# Función de apoyo para evitar errores de codificación en FPDF clásico (si no usas fpdf2)
+def sanear_texto(texto):
+    return str(texto).encode('latin-1', 'replace').decode('latin-1')
+
 def crear_hoja_alumno_pdf(pdf, datos, semana, es_grupal=False):
     pdf.add_page()
+    
+    # MEJORA 4: (Opcional) Si subes un archivo Arial.ttf a tu repo, descomenta las siguientes dos líneas para soporte total de acentos/ñ
+    # pdf.add_font('ArialUnicode', '', 'Arial.ttf', uni=True)
+    # pdf.set_font("ArialUnicode", "", 14)
+    # Mientras tanto, usaremos sanear_texto() para evitar que la aplicación se caiga con caracteres especiales.
+    
     nombre_full = f"{datos.get('NOMBRE', '')} {datos.get('PATERNO', '')} {datos.get('MATERNO', '')}".strip()
     pdf.set_font("Helvetica", "B", 14)
     pdf.set_text_color(29, 53, 87)
-    pdf.cell(0, 10, f"REPORTE ESCOLAR: {nombre_full}", ln=True, align="C")
+    pdf.cell(0, 10, sanear_texto(f"REPORTE ESCOLAR: {nombre_full}"), ln=True, align="C")
+    
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 7, f"Semana: {semana} | Maestro: {NOMBRE_MAESTRO}", ln=True, align="C")
+    pdf.cell(0, 7, sanear_texto(f"Semana: {semana} | Maestro: {NOMBRE_MAESTRO}"), ln=True, align="C")
     pdf.ln(5)
+    
     pdf.set_fill_color(29, 53, 87); pdf.set_text_color(255, 255, 255)
     pdf.cell(140, 8, " ACTIVIDAD", border=1, fill=True)
     pdf.cell(50, 8, " ESTADO", border=1, fill=True, ln=True)
+    
     pdf.set_text_color(0, 0, 0); pdf.set_font("Helvetica", "", 9)
     omitir = ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']
+    
     for k, v in datos.items():
         if k.upper() not in omitir and not str(k).startswith('Unnamed'):
-            pdf.cell(140, 7, f" {str(k)[:75]}", border=1)
-            pdf.cell(50, 7, f" {procesar_valor(v).replace('❌ ','').replace('✅ ','')}", border=1, ln=True)
+            actividad_str = sanear_texto(f" {str(k)[:75]}")
+            estado_str = sanear_texto(f" {procesar_valor(v).replace('❌ ','').replace('✅ ','')}")
+            pdf.cell(140, 7, actividad_str, border=1)
+            pdf.cell(50, 7, estado_str, border=1, ln=True)
+            
     if not es_grupal:
         pdf.ln(10); pdf.set_font("Helvetica", "I", 8); pdf.set_text_color(100, 100, 100)
         ts = datetime.now(pytz.timezone('America/Mexico_City')).strftime("%d/%m/%Y %H:%M:%S")
-        pdf.multi_cell(0, 5, f"Descarga oficial: {ts} hrs.\nMatrícula: {datos.get('MATRICULA','')}", align='C')
+        pdf.multi_cell(0, 5, sanear_texto(f"Descarga oficial: {ts} hrs.\nMatrícula: {datos.get('MATRICULA','')}"), align='C')
 
 @st.cache_data(ttl=60)
 def obtener_nombres_hojas(sid):
@@ -130,8 +153,12 @@ def obtener_nombres_hojas(sid):
         url = f"https://docs.google.com/spreadsheets/d/{sid}/export?format=xlsx"
         xls = pd.ExcelFile(url, engine='openpyxl')
         return xls.sheet_names
-    except: return ["Semana 1"]
+    except Exception as e: 
+        print(f"Error al obtener hojas: {e}")
+        return ["Semana 1"]
 
+# MEJORA 3: Caché para evitar saturar Google Sheets y hacer la app mucho más rápida (guarda los datos por 5 minutos)
+@st.cache_data(ttl=300)
 def cargar_datos(nombre_hoja):
     url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={quote(nombre_hoja)}&t={int(time.time())}"
     return pd.read_csv(url)
