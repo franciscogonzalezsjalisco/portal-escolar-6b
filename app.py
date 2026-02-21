@@ -33,20 +33,22 @@ st.markdown(f"""
     }}
     h1, h2, h3, h4, p, label, span, div, .stSelectbox p {{ color: #1D3557 !important; font-family: 'Segoe UI', sans-serif; }}
     
-    /* 2. BANNER SUPERIOR (Nombre del alumno) */
+   /* 2. BANNER SUPERIOR (Nombre del alumno) */
     .banner-maestro { 
         text-align: center; 
-        background: #1D3557 !important; 
+        background-color: #1D3557 !important; /* Azul Marino */
         padding: 20px; 
         border-radius: 15px; 
         margin-bottom: 25px; 
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
     }
     
-    /* Forzamos a que el texto dentro del banner sea BLANCO */
-    .banner-maestro h2, .banner-maestro h3, .banner-maestro p {
-        color: white !important;
-        margin: 0px !important;
+    /* Esta es la parte clave: Fuerza el color BLANCO en los textos del banner */
+    .banner-maestro h2, 
+    .banner-maestro h3, 
+    .banner-maestro p {
+        color: #FFFFFF !important;
+        margin: 5px 0px !important;
     }
     
     /* 3. BOTONES (ESTILO AZUL MARINO/BLANCO) */
