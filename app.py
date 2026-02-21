@@ -33,11 +33,21 @@ st.markdown(f"""
     }}
     h1, h2, h3, h4, p, label, span, div, .stSelectbox p {{ color: #1D3557 !important; font-family: 'Segoe UI', sans-serif; }}
     
-    /* 2. BANNER SUPERIOR */
-    .banner-maestro {{ 
-        text-align: center; background: #1D3557; color: white !important; 
-        padding: 15px; border-radius: 12px; margin-bottom: 20px; font-weight: bold; 
-    }}
+    /* 2. BANNER SUPERIOR (Nombre del alumno) */
+    .banner-maestro { 
+        text-align: center; 
+        background: #1D3557 !important; 
+        padding: 20px; 
+        border-radius: 15px; 
+        margin-bottom: 25px; 
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+    }
+    
+    /* Forzamos a que el texto dentro del banner sea BLANCO */
+    .banner-maestro h2, .banner-maestro h3, .banner-maestro p {
+        color: white !important;
+        margin: 0px !important;
+    }
     
     /* 3. BOTONES (ESTILO AZUL MARINO/BLANCO) */
     div.stButton > button {{ 
