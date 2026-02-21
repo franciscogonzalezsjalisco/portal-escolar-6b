@@ -60,12 +60,6 @@ st.markdown(f"""
         font-weight: bold; 
     }}
 
-    .streamlit-expanderHeader {{
-        background-color: #F1F4F9 !important;
-        border: 1px solid #1D3557 !important;
-        border-radius: 10px !important;
-    }}
-
     .footer {{
         position: fixed;
         left: 0;
@@ -98,7 +92,7 @@ def registrar_en_bitacora(matricula, nombre, semana, accion):
         params = {"fecha": ts, "matricula": str(matricula), "nombre": str(nombre), "semana": str(semana), "accion": str(accion)}
         headers = {"User-Agent": "Mozilla/5.0"}
         requests.get(URL_LOG_SCRIPT, params=params, headers=headers, timeout=10)
-        st.toast(f"Registro exitoso: {accion}", icon="✅")
+        st.toast(f"Registro: {accion}", icon="✅")
     except: pass
 
 def procesar_valor(val):
@@ -184,7 +178,7 @@ elif st.session_state.pantalla == 'matricula':
                 st.session_state.alumno_datos = fila.iloc[0].to_dict()
                 registrar_en_bitacora(st.session_state.ID_USUARIO, st.session_state.alumno_datos.get('NOMBRE',''), st.session_state.semana_activa, "Ingreso")
                 st.session_state.pantalla = 'resultados'; st.rerun()
-            else: st.error("❌ No encontrada")
+            else: st.error("❌ Matrícula no encontrada")
     if st.button("⬅️ VOLVER"): st.session_state.pantalla = 'inicio'; st.rerun()
 
 elif st.session_state.pantalla == 'resultados':
@@ -220,10 +214,9 @@ elif st.session_state.pantalla == 'resultados':
     with c1:
         pdf_ind = FPDF()
         crear_hoja_alumno_pdf(pdf_ind, datos, st.session_state.semana_activa)
-        if st.download_button(f"📥 Descargar PDF", data=bytes(pdf_ind.output()), file_name=f"Reporte_{datos.get('PATERNO','')}.pdf"):
-            registrar_en_bitacora(st.session_state.ID_USUARIO, nombre_c, st.session_state.semana_activa, "Descarga PDF")
+        st.download_button(f"📥 PDF", data=bytes(pdf_ind.output()), file_name=f"Reporte_{datos.get('PATERNO','')}.pdf")
     with c2:
-        if st.button("👥 OTRO ALUMNO"): st.session_state.pantalla = 'inicio'; st.rerun()
+        if st.button("👥 SALIR"): st.session_state.pantalla = 'inicio'; st.rerun()
 
 # 5. PIE DE PÁGINA FIJO
 st.markdown(f'<div class="footer">{NOMBRE_MAESTRO}</div>', unsafe_allow_html=True)
