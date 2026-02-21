@@ -116,24 +116,27 @@ if st.session_state.pantalla == 'inicio':
         pw = st.text_input("Contraseña:", type="password")
         if pw == PASS_MAESTRO:
             sem_m = st.selectbox("Semana para reporte grupal:", listado_hojas)
-            if st.button("🚀 GENERAR PDF GRUPAL"):
-                with st.spinner("Generando todas las hojas..."):
-                    df_m = cargar_datos(sem_m)
-                    pdf_m = FPDF()
-                    # Recorremos cada fila del Excel para crear una hoja por alumno
-                    for _, f in df_m.iterrows(): 
-                        crear_hoja_alumno_pdf(pdf_m, f.to_dict(), sem_m, es_grupal=True)
-                    
-                    # Generamos el archivo para descarga
-                    pdf_bytes = pdf_m.output(dest='S').encode('latin-1')
-                    st.download_button(
-                        f"📥 Descargar {sem_m}", 
-                        data=pdf_bytes, 
-                        file_name=f"Grupo_6B_{sem_m}.pdf",
-                        mime="application/pdf"
-                    )
-                    # REGISTRO DE TU ACTIVIDAD EN LA BITÁCORA
-                    registrar_en_bitacora("MAESTRO", NOMBRE_MAESTRO, sem_m, "Descarga Masiva")
+if st.button("🚀 GENERAR PDF GRUPAL"):
+    with st.spinner("Generando todas las hojas..."):
+        df_m = cargar_datos(sem_m)
+        pdf_m = FPDF()
+        for _, f in df_m.iterrows(): 
+            crear_hoja_alumno_pdf(pdf_m, f.to_dict(), sem_m, es_grupal=True)
+        
+        # FORMA CORRECTA DE OBTENER BYTES EN FPDF2
+        pdf_output = pdf_m.output() 
+        if isinstance(pdf_output, str):
+            pdf_bytes = pdf_output.encode('latin-1')
+        else:
+            pdf_bytes = pdf_output # Ya son bytes
+            
+        st.download_button(
+            label=f"📥 Descargar {sem_m}", 
+            data=pdf_bytes, 
+            file_name=f"Grupo_6B_{sem_m}.pdf",
+            mime="application/pdf"
+        )
+        registrar_en_bitacora("MAESTRO", NOMBRE_MAESTRO, sem_m, "Descarga Masiva")
                     
 elif st.session_state.pantalla == 'matricula':
     st.markdown(f"<h4 style='text-align: center;'>📍 {st.session_state.semana_activa}</h4>", unsafe_allow_html=True)
