@@ -37,13 +37,26 @@ st.markdown(f'<div class="banner-maestro">🏫 {NOMBRE_MAESTRO} <br> <span style
 
 # 3. FUNCIONES
 def registrar_en_bitacora(matricula, nombre, semana, accion):
+    """Envío robusto con manejo de parámetros para Google Apps Script"""
     try:
-        payload = {
+        # Usamos parámetros de URL para asegurar que Google los reciba correctamente
+        params = {
             "fecha": datetime.now(pytz.timezone('America/Mexico_City')).strftime("%d/%m/%Y %H:%M:%S"),
-            "matricula": str(matricula), "nombre": str(nombre), "semana": str(semana), "accion": str(accion)
+            "matricula": str(matricula),
+            "nombre": str(nombre),
+            "semana": str(semana),
+            "accion": str(accion)
         }
-        requests.post(URL_LOG_SCRIPT, json=payload, timeout=5)
-    except: pass
+        # Enviamos via GET/POST con redirección permitida
+        response = requests.post(URL_LOG_SCRIPT, params=params, timeout=10, allow_redirects=True)
+        
+        # Esto nos avisará en una pequeña burbuja si Google respondió bien
+        if response.status_code == 200:
+            st.toast("✅ Actividad registrada", icon="📝")
+        else:
+            st.toast(f"⚠️ Error bitácora: {response.status_code}")
+    except Exception as e:
+        st.toast(f"📡 Error de red: {str(e)}")
 
 def procesar_valor(val):
     v_str = str(val).strip().upper()
