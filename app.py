@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
-import time
-from urllib.parse import quote
 from fpdf import FPDF
-from datetime import datetime
-import pytz 
 import requests
+from datetime import datetime
+import pytz
+from urllib.parse import quote
 
 # 1. CONFIGURACIÓN E IDENTIDAD
 st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
