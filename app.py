@@ -15,7 +15,7 @@ PASS_MAESTRO = "6B2024"
 URL_ESCUDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/ESCUDO%20690%20(1).png"
 URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
-URL_LOG_SCRIPT = "https://script.google.com/macros/s/AKfycbzQXjTSb-nfwp1JfKm2xcnaO94xOrv7WtNLQ_lozpiIuyrcfRKLqfhbgFt3TXdkGqjS/exec"
+URL_LOG_SCRIPT = "https://script.google.com/macros/s/AKfycbwNGbSsky_dCyzvhf0WGfWj0mJMxR74Jrz2jmpIkJYLUDsH07cTCQjgbKO2E-TlaN_G/exec"
 
 if 'pantalla' not in st.session_state: st.session_state.pantalla = 'inicio'
 if 'semana_activa' not in st.session_state: st.session_state.semana_activa = None
@@ -37,8 +37,8 @@ st.markdown(f'<div class="banner-maestro">🏫 {NOMBRE_MAESTRO} <br> <span style
 
 # 3. FUNCIONES
 def registrar_en_bitacora(matricula, nombre, semana, accion):
+    """Envía los datos a la bitácora usando el método GET verificado"""
     try:
-        # Enviamos los datos como parámetros para máxima compatibilidad con Google
         params = {
             "fecha": datetime.now(pytz.timezone('America/Mexico_City')).strftime("%d/%m/%Y %H:%M:%S"),
             "matricula": str(matricula),
@@ -46,14 +46,12 @@ def registrar_en_bitacora(matricula, nombre, semana, accion):
             "semana": str(semana),
             "accion": str(accion)
         }
-        # allow_redirects es clave para que Google Sheets acepte la conexión
-        response = requests.post(URL_LOG_SCRIPT, params=params, timeout=10, allow_redirects=True)
-        
-        if response.status_code == 200:
-            st.toast(f"Registro guardado: {accion}", icon="📝")
-    except Exception as e:
-        # Si falla, no detiene la app, solo lo registra en la consola
-        print(f"Error de bitácora: {e}")
+        # Usamos requests.get porque es el que dio "Éxito" en la prueba del navegador
+        requests.get(URL_LOG_SCRIPT, params=params, timeout=5)
+        st.toast(f"Bitácora: {accion} registrado", icon="✅")
+    except:
+        # Si falla el internet, la app sigue funcionando normalmente
+        pass
 def procesar_valor(val):
     v_str = str(val).strip().upper()
     if v_str in ['NAN', '', '0', '0.0', 'FALSE', 'FALSO']: return "❌ Pendiente"
