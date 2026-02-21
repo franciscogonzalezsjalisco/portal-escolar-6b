@@ -23,17 +23,65 @@ if 'ID_USUARIO' not in st.session_state: st.session_state.ID_USUARIO = ""
 if 'alumno_datos' not in st.session_state: st.session_state.alumno_datos = None
 
 # 2. ESTILOS (AZUL MARINO Y BLANCO)
-st.markdown(f"""
-    <style>
-    .stApp {{ background-color: white !important; background: linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url("{URL_FONDO}"); background-size: cover; }}
-    h1, h2, h3, h4, p, label, span, div, .stSelectbox p {{ color: #1D3557 !important; font-family: 'Segoe UI', sans-serif; }}
-    .banner-maestro {{ text-align: center; background: #1D3557; color: white !important; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-weight: bold; }}
-    div.stButton > button {{ background-color: white !important; color: #1D3557 !important; border: 2px solid #1D3557 !important; width: 100% !important; border-radius: 12px !important; font-weight: 900; height: 50px; }}
-    .tabla-container {{ background: white; padding: 15px; border-radius: 15px; border: 2px solid #1D3557; margin-top: 15px; }}
-    </style>
-    """, unsafe_allow_html=True)
+<style>
+    /* 1. FONDO Y TEXTOS GENERALES */
+    .stApp { 
+        background-color: white !important; 
+        background: linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url("{URL_FONDO}"); 
+        background-size: cover; 
+    }
+    h1, h2, h3, h4, p, label, span, div, .stSelectbox p { color: #1D3557 !important; font-family: 'Segoe UI', sans-serif; }
+    
+    /* 2. BANNER SUPERIOR */
+    .banner-maestro { 
+        text-align: center; background: #1D3557; color: white !important; 
+        padding: 15px; border-radius: 12px; margin-bottom: 20px; font-weight: bold; 
+    }
+    
+    /* 3. BOTONES (ESTILO AZUL MARINO/BLANCO) */
+    div.stButton > button { 
+        background-color: white !important; color: #1D3557 !important; 
+        border: 2px solid #1D3557 !important; width: 100% !important; 
+        border-radius: 12px !important; font-weight: 900; height: 50px; 
+    }
 
-st.markdown(f'<div class="banner-maestro">🏫 {NOMBRE_MAESTRO} <br> <span style="color:white; font-size: 0.8rem;">6° B - Control Escolar Digital</span></div>', unsafe_allow_html=True)
+    /* 4. MENÚ DE SEMANAS (SELECTBOX PERSONALIZADO) */
+    div[data-baseweb="select"] {
+        border: 2px solid #1D3557 !important;
+        border-radius: 12px !important;
+        background-color: white !important;
+    }
+    div[data-testid="stSelectbox"] label, div[data-baseweb="select"] div {
+        color: #1D3557 !important;
+        font-weight: bold !important;
+    }
+    ul[data-baseweb="menu"] { background-color: white !important; border: 1px solid #1D3557 !important; }
+    li[data-baseweb="option"] { color: #1D3557 !important; background-color: white !important; }
+    li[data-baseweb="option"]:hover { background-color: #f1f4f9 !important; }
+
+    /* 5. PANEL DEL MAESTRO (EXPANDER) */
+    .streamlit-expanderHeader {
+        background-color: #F1F4F9 !important; /* Azul claro distintivo */
+        border: 1px solid #1D3557 !important;
+        border-radius: 10px !important;
+        color: #1D3557 !important;
+        font-weight: bold !important;
+    }
+    .streamlit-expanderContent {
+        background-color: #F1F4F9 !important;
+        border-left: 1px solid #1D3557 !important;
+        border-right: 1px solid #1D3557 !important;
+        border-bottom: 1px solid #1D3557 !important;
+        border-radius: 0 0 10px 10px !important;
+    }
+
+    /* 6. TABLAS Y OTROS */
+    .tabla-container { 
+        background: white; padding: 15px; border-radius: 15px; 
+        border: 2px solid #1D3557; margin-top: 15px; 
+    }
+    div[data-testid="stTextInput"] input { border: 1px solid #1D3557 !important; color: #1D3557 !important; }
+    </style>
 
 # 3. FUNCIONES
 def registrar_en_bitacora(matricula, nombre, semana, accion):
