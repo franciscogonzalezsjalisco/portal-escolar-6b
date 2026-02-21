@@ -15,7 +15,7 @@ PASS_MAESTRO = "6B2024"
 URL_ESCUDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/ESCUDO%20690%20(1).png"
 URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
-URL_LOG_SCRIPT = "https://script.google.com/macros/s/AKfycbz7fq8UUTz4JwoghvrzIZjVOFed4uWjq2_VYJIkL3HKHcE_izHMSRLQcrefrPf7pho/exec"
+URL_LOG_SCRIPT = "https://script.google.com/macros/s/AKfycbzQXjTSb-nfwp1JfKm2xcnaO94xOrv7WtNLQ_lozpiIuyrcfRKLqfhbgFt3TXdkGqjS/exec"
 
 if 'pantalla' not in st.session_state: st.session_state.pantalla = 'inicio'
 if 'semana_activa' not in st.session_state: st.session_state.semana_activa = None
