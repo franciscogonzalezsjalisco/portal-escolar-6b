@@ -134,6 +134,7 @@ if st.session_state.pantalla == 'inicio':
                     )
                     # REGISTRO DE TU ACTIVIDAD EN LA BITÁCORA
                     registrar_en_bitacora("MAESTRO", NOMBRE_MAESTRO, sem_m, "Descarga Masiva")
+                    
 elif st.session_state.pantalla == 'matricula':
     st.markdown(f"<h4 style='text-align: center;'>📍 {st.session_state.semana_activa}</h4>", unsafe_allow_html=True)
     mat_in = st.text_input("Matrícula:", value=st.session_state.ID_USUARIO)
