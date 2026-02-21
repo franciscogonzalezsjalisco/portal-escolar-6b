@@ -37,9 +37,8 @@ st.markdown(f'<div class="banner-maestro">🏫 {NOMBRE_MAESTRO} <br> <span style
 
 # 3. FUNCIONES
 def registrar_en_bitacora(matricula, nombre, semana, accion):
-    """Envío robusto con manejo de parámetros para Google Apps Script"""
     try:
-        # Usamos parámetros de URL para asegurar que Google los reciba correctamente
+        # Enviamos los datos como parámetros para máxima compatibilidad con Google
         params = {
             "fecha": datetime.now(pytz.timezone('America/Mexico_City')).strftime("%d/%m/%Y %H:%M:%S"),
             "matricula": str(matricula),
@@ -47,17 +46,14 @@ def registrar_en_bitacora(matricula, nombre, semana, accion):
             "semana": str(semana),
             "accion": str(accion)
         }
-        # Enviamos via GET/POST con redirección permitida
+        # allow_redirects es clave para que Google Sheets acepte la conexión
         response = requests.post(URL_LOG_SCRIPT, params=params, timeout=10, allow_redirects=True)
         
-        # Esto nos avisará en una pequeña burbuja si Google respondió bien
         if response.status_code == 200:
-            st.toast("✅ Actividad registrada", icon="📝")
-        else:
-            st.toast(f"⚠️ Error bitácora: {response.status_code}")
+            st.toast(f"Registro guardado: {accion}", icon="📝")
     except Exception as e:
-        st.toast(f"📡 Error de red: {str(e)}")
-
+        # Si falla, no detiene la app, solo lo registra en la consola
+        print(f"Error de bitácora: {e}")
 def procesar_valor(val):
     v_str = str(val).strip().upper()
     if v_str in ['NAN', '', '0', '0.0', 'FALSE', 'FALSO']: return "❌ Pendiente"
