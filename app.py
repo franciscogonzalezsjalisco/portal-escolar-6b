@@ -22,78 +22,54 @@ if 'semana_activa' not in st.session_state: st.session_state.semana_activa = Non
 if 'ID_USUARIO' not in st.session_state: st.session_state.ID_USUARIO = ""
 if 'alumno_datos' not in st.session_state: st.session_state.alumno_datos = None
 
-# 2. ESTILOS (AZUL MARINO Y BLANCO)
+# --- ESTILOS DE DISEÑO ---
 st.markdown(f"""
     <style>
-    /* 1. FONDO Y TEXTOS GENERALES */
+    /* 1. FONDO GENERAL */
     .stApp {{ 
         background-color: white !important; 
         background: linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url("{URL_FONDO}"); 
         background-size: cover; 
     }}
-    h1, h2, h3, h4, p, label, span, div, .stSelectbox p {{ color: #1D3557 !important; font-family: 'Segoe UI', sans-serif; }}
     
-   /* 2. BANNER SUPERIOR (Nombre del alumno) */
-    .banner-maestro { 
+    /* 2. TEXTOS GENERALES (AZUL MARINO) */
+    h1, h2, h3, h4, p, label, span, div {{ color: #1D3557; font-family: 'Segoe UI', sans-serif; }}
+
+    /* 3. BANNER DEL ALUMNO (FONDO AZUL, LETRAS BLANCAS) */
+    .banner-maestro {{ 
         text-align: center; 
-        background-color: #1D3557 !important; /* Azul Marino */
+        background-color: #1D3557 !important; 
         padding: 20px; 
         border-radius: 15px; 
         margin-bottom: 25px; 
         box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
-    }
-    
-    /* Esta es la parte clave: Fuerza el color BLANCO en los textos del banner */
-    .banner-maestro h2, 
-    .banner-maestro h3, 
-    .banner-maestro p {
+    }}
+    .banner-maestro h2, .banner-maestro h3, .banner-maestro p {{
         color: #FFFFFF !important;
         margin: 5px 0px !important;
-    }
-    
-    /* 3. BOTONES (ESTILO AZUL MARINO/BLANCO) */
-    div.stButton > button {{ 
-        background-color: white !important; color: #1D3557 !important; 
-        border: 2px solid #1D3557 !important; width: 100% !important; 
-        border-radius: 12px !important; font-weight: 900; height: 50px; 
     }}
 
-    /* 4. MENÚ DE SEMANAS (SELECTBOX PERSONALIZADO) */
+    /* 4. SELECTBOX (MENÚ DE SEMANAS) */
     div[data-baseweb="select"] {{
         border: 2px solid #1D3557 !important;
         border-radius: 12px !important;
-        background-color: white !important;
     }}
-    div[data-testid="stSelectbox"] label, div[data-baseweb="select"] div {{
-        color: #1D3557 !important;
-        font-weight: bold !important;
+    
+    /* 5. BOTONES */
+    div.stButton > button {{ 
+        background-color: white !important; 
+        color: #1D3557 !important; 
+        border: 2px solid #1D3557 !important; 
+        border-radius: 12px !important; 
+        font-weight: bold; 
     }}
-    ul[data-baseweb="menu"] {{ background-color: white !important; border: 1px solid #1D3557 !important; }}
-    li[data-baseweb="option"] {{ color: #1D3557 !important; background-color: white !important; }}
-    li[data-baseweb="option"]:hover {{ background-color: #f1f4f9 !important; }}
 
-    /* 5. PANEL DEL MAESTRO (EXPANDER) */
+    /* 6. PANEL DEL MAESTRO (AZUL CLARO) */
     .streamlit-expanderHeader {{
-        background-color: #F1F4F9 !important; 
+        background-color: #F1F4F9 !important;
         border: 1px solid #1D3557 !important;
         border-radius: 10px !important;
-        color: #1D3557 !important;
-        font-weight: bold !important;
     }}
-    .streamlit-expanderContent {{
-        background-color: #F1F4F9 !important;
-        border-left: 1px solid #1D3557 !important;
-        border-right: 1px solid #1D3557 !important;
-        border-bottom: 1px solid #1D3557 !important;
-        border-radius: 0 0 10px 10px !important;
-    }}
-
-    /* 6. TABLAS Y OTROS */
-    .tabla-container {{ 
-        background: white; padding: 15px; border-radius: 15px; 
-        border: 2px solid #1D3557; margin-top: 15px; 
-    }}
-    div[data-testid="stTextInput"] input {{ border: 1px solid #1D3557 !important; color: #1D3557 !important; }}
     </style>
     """, unsafe_allow_html=True)
     
