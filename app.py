@@ -9,7 +9,7 @@ st.set_page_config(page_title="Portal Escolar 6°B", layout="centered")
 
 # --- VARIABLES PERSONALIZABLES ---
 NOMBRE_MAESTRO = "Profr. Francisco Gmo. González S."
-URL_ESCUDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png" # <--- Link de tu escudo
+URL_ESCUDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/ESCUDO 690 (1).png"
 URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
 SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
 
