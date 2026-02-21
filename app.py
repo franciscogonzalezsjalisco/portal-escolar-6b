@@ -77,6 +77,8 @@ st.markdown(f"""
         font-weight: bold;
         border-top: 1px solid #1D3557;
     }}
+    </style>
+    """, unsafe_allow_html=True)
 
 # 3. --- ENCABEZADO PRINCIPAL (LOGO Y TÍTULO) ---
 col1, col2, col3 = st.columns([1, 2, 1])
