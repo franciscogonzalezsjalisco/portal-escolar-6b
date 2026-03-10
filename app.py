@@ -180,12 +180,12 @@ if st.session_state.pantalla == 'inicio':
                     st.session_state.pantalla = 'matricula'; st.rerun()
     st.markdown("---")
     
-    # --- ACCESO MAESTRO ---
+   # --- ACCESO MAESTRO ---
     with st.expander("🔐 Acceso Maestro"):
         pw = st.text_input("Contraseña:", type="password")
         if pw == PASS_MAESTRO:
             # Creamos dos pestañas para organizar las descargas
-            tab1, tab2 = st.tabs(["👥 Reporte Grupal", "👤 Reporte Histórico"])
+            tab1, tab2 = st.tabs(["👥 Reporte Grupal", "👤 Reporte Histórico / Especializado"])
             
             # PESTAÑA 1: Todo el grupo, una semana
             with tab1:
@@ -200,19 +200,31 @@ if st.session_state.pantalla == 'inicio':
                         st.download_button(label=f"📥 Descargar {sem_m}", data=pdf_bytes, file_name=f"Grupo_6B_{sem_m}.pdf", mime="application/pdf")
                         registrar_en_bitacora("MAESTRO", NOMBRE_MAESTRO, sem_m, "Descarga Masiva")
             
-            # PESTAÑA 2: Un alumno, todas las semanas
+            # PESTAÑA 2: Un alumno, selección de semanas específicas
             with tab2:
                 mat_hist = st.text_input("Matrícula del alumno a buscar:")
-                if st.button("🚀 BUSCAR HISTÓRICO"):
+                
+                # NUEVO: Selector múltiple de semanas (funciona como casillas de verificación)
+                st.markdown("**Selecciona las semanas a incluir en el reporte:**")
+                semanas_seleccionadas = st.multiselect(
+                    "Semanas disponibles:", 
+                    options=listado_hojas, 
+                    default=listado_hojas # Por defecto, selecciona todas para mayor comodidad
+                )
+                
+                if st.button("🚀 GENERAR REPORTE ESPECIALIZADO"):
                     if mat_hist.strip() == "":
-                        st.warning("Por favor, ingresa una matrícula.")
+                        st.warning("⚠️ Por favor, ingresa una matrícula.")
+                    elif len(semanas_seleccionadas) == 0:
+                        st.warning("⚠️ Por favor, selecciona al menos una semana.")
                     else:
-                        with st.spinner("Buscando en todas las semanas..."):
+                        with st.spinner("Buscando y generando reporte..."):
                             pdf_hist = FPDF()
                             hubo_datos = False
                             nombre_alumno_hist = ""
                             
-                            for sem in listado_hojas:
+                            # Ahora el ciclo solo recorre las semanas que elegiste en la pantalla
+                            for sem in semanas_seleccionadas:
                                 df_h = cargar_datos(sem)
                                 df_h.columns = [str(c).strip() for c in df_h.columns]
                                 col_m = [c for c in df_h.columns if "MATRICULA" in c.upper()]
@@ -231,14 +243,14 @@ if st.session_state.pantalla == 'inicio':
                             if hubo_datos:
                                 pdf_bytes_hist = bytes(pdf_hist.output())
                                 st.download_button(
-                                    label=f"📥 Descargar PDF de {nombre_alumno_hist}", 
+                                    label=f"📥 Descargar Reporte de {nombre_alumno_hist}", 
                                     data=pdf_bytes_hist, 
-                                    file_name=f"Historico_{nombre_alumno_hist}_{mat_hist.strip()}.pdf", 
+                                    file_name=f"Reporte_Especializado_{nombre_alumno_hist}_{mat_hist.strip()}.pdf", 
                                     mime="application/pdf"
                                 )
-                                registrar_en_bitacora("MAESTRO", NOMBRE_MAESTRO, "TODAS", f"Descarga Histórica {mat_hist}")
+                                registrar_en_bitacora("MAESTRO", NOMBRE_MAESTRO, "ESPECIALIZADO", f"Descarga {mat_hist}")
                             else:
-                                st.error("❌ Matrícula no encontrada en ninguna de las semanas.")
+                                st.error("❌ Matrícula no encontrada en las semanas seleccionadas.")
 
 elif st.session_state.pantalla == 'matricula':
     st.markdown(f"<h4 style='text-align: center;'>📍 {st.session_state.semana_activa}</h4>", unsafe_allow_html=True)
