@@ -296,11 +296,11 @@ if st.session_state.pantalla == 'inicio':
     st.info("Descarga un archivo PDF que agrupa todas las evaluaciones del alumno correspondientes al trimestre seleccionado.")
     
     # Agrupamos las semanas. 
-    # (El código corta tu lista de hojas: [0:13] toma las primeras 13 hojas, [13:26] las siguientes 13, etc.)
+    # (El código corta tu lista de hojas: [0:13] toma las primeras 12 hojas, [12:24] las siguientes 12, etc.)
     trimestres = {
-        "1er Trimestre": listado_hojas[0:13] if len(listado_hojas) > 0 else [],
-        "2do Trimestre": listado_hojas[13:26] if len(listado_hojas) > 13 else [],
-        "3er Trimestre": listado_hojas[26:] if len(listado_hojas) > 26 else []
+        "2do Trimestre": listado_hojas[0:12] if len(listado_hojas) > 0 else [],
+        "3er Trimestre": listado_hojas[13:24] if len(listado_hojas) > 13 else [],
+        
     }
     
     # Creamos dos columnas para que se vea ordenado
