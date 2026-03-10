@@ -290,68 +290,23 @@ if st.session_state.pantalla == 'inicio':
                             else:
                                 st.error("❌ Alumno no encontrado en las semanas seleccionadas.")
 
-# --- SECCIÓN DE REPORTES TRIMESTRALES PARA PADRES ---
-    st.markdown("---")
-    st.markdown("<h3 style='text-align: center; color: #1D3557;'>📊 Historial Trimestral</h3>", unsafe_allow_html=True)
-    st.info("Descarga un archivo PDF que agrupa todas las evaluaciones del alumno correspondientes al trimestre seleccionado.")
-    
-    # Agrupamos las semanas. 
-    # (El código corta tu lista de hojas: [0:13] toma las primeras 12 hojas, [12:24] las siguientes 12, etc.)
-    trimestres = {
-        "2do Trimestre": listado_hojas[0:12] if len(listado_hojas) > 0 else [],
-        "3er Trimestre": listado_hojas[13:24] if len(listado_hojas) > 13 else [],
-        
-    }
-    
-    # Creamos dos columnas para que se vea ordenado
-    col_t1, col_t2 = st.columns([2, 1])
-    
-    with col_t1:
-        opcion_trimestre = st.selectbox("Selecciona el periodo a consultar:", ["1er Trimestre", "2do Trimestre", "3er Trimestre"])
-    
-    with col_t2:
-        st.markdown("<br>", unsafe_allow_html=True) # Espacio para alinear el botón con el selector
-        if st.button(f"🚀 Generar {opcion_trimestre}"):
-            semanas_del_trimestre = trimestres[opcion_trimestre]
-            
-            if len(semanas_del_trimestre) == 0:
-                st.warning("⏳ Aún no hay evaluaciones registradas para este periodo.")
-            else:
-                with st.spinner("Recopilando evaluaciones..."):
-                    pdf_padres = FPDF()
-                    hubo_datos = False
-                    nombre_alumno = ""
-                    
-                    # Usamos la matrícula que el padre ya ingresó para entrar a esta pantalla
-                    # (Asumo que la guardaste en st.session_state.matricula, si se llama distinto, cámbiala aquí)
-                    mat_padre = st.session_state.matricula.strip() 
-                    
-                    for sem in semanas_del_trimestre:
-                        df_p = cargar_datos(sem)
-                        df_p.columns = [str(c).strip() for c in df_p.columns]
-                        col_m = [c for c in df_p.columns if "MATRICULA" in c.upper()]
-                        
-                        if col_m:
-                            df_p['BUSCAR'] = df_p[col_m[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
-                            fila = df_p[df_p['BUSCAR'] == mat_padre] 
-                            
-                            if not fila.empty:
-                                hubo_datos = True
-                                datos_al = fila.iloc[0].to_dict()
-                                if nombre_alumno == "": 
-                                    nombre_alumno = f"{datos_al.get('PATERNO', '')}_{datos_al.get('NOMBRE', '')}".strip()
-                                crear_hoja_alumno_pdf(pdf_padres, datos_al, f"{sem} ({opcion_trimestre})", es_grupal=False)
-                    
-                    if hubo_datos:
-                        st.download_button(
-                            label=f"📥 Guardar PDF del {opcion_trimestre}", 
-                            data=bytes(pdf_padres.output()), 
-                            file_name=f"{opcion_trimestre.replace(' ','_')}_{nombre_alumno}.pdf", 
-                            mime="application/pdf"
-                        )
-                        registrar_en_bitacora("PADRE/ALUMNO", nombre_alumno, "TRIMESTRAL", f"Descarga {opcion_trimestre}")
-                    else:
-                        st.error("❌ No se encontraron datos en este trimestre.")
+elif st.session_state.pantalla == 'matricula':
+    st.markdown(f"<h4 style='text-align: center;'>📍 {st.session_state.semana_activa}</h4>", unsafe_allow_html=True)
+    mat_in = st.text_input("Matrícula:", value=st.session_state.get('ID_USUARIO', ""))
+    if st.button("🔍 VER REPORTE"):
+        st.session_state.ID_USUARIO = mat_in.strip()
+        df = cargar_datos(st.session_state.semana_activa)
+        df.columns = [str(c).strip() for c in df.columns]
+        col_m = [c for c in df.columns if "MATRICULA" in c.upper()]
+        if col_m:
+            df['BUSCAR'] = df[col_m[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
+            fila = df[df['BUSCAR'] == st.session_state.ID_USUARIO]
+            if not fila.empty:
+                st.session_state.alumno_datos = fila.iloc[0].to_dict()
+                registrar_en_bitacora(st.session_state.ID_USUARIO, st.session_state.alumno_datos.get('NOMBRE',''), st.session_state.semana_activa, "Ingreso")
+                st.session_state.pantalla = 'resultados'; st.rerun()
+            else: st.error("❌ Matrícula no encontrada")
+    if st.button("⬅️ VOLVER"): st.session_state.pantalla = 'inicio'; st.rerun()
 
 elif st.session_state.pantalla == 'resultados':
     datos = st.session_state.alumno_datos
