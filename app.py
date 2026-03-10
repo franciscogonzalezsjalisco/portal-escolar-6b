@@ -168,16 +168,71 @@ def cargar_datos(nombre_hoja):
 # --- FLUJO DE PANTALLAS ---
 listado_hojas = obtener_nombres_hojas(SHEET_ID)
 
-if st.session_state.pantalla == 'inicio':
-    st.markdown("<h4 style='text-align: center;'>Selecciona la semana</h4>", unsafe_allow_html=True)
-    for i in range(0, len(listado_hojas), 2):
-        cols = st.columns(2)
-        for j in range(2):
-            idx = i + j
-            if idx < len(listado_hojas):
-                if cols[j].button(listado_hojas[idx], key=f"btn_{idx}"):
-                    st.session_state.semana_activa = listado_hojas[idx]
-                    st.session_state.pantalla = 'matricula'; st.rerun()
+with st.expander("🔐 Acceso Maestro"):
+        pw = st.text_input("Contraseña:", type="password")
+        if pw == PASS_MAESTRO:
+            # Creamos dos pestañas para organizar las descargas
+            tab1, tab2 = st.tabs(["👥 Reporte Grupal (Por Semana)", "👤 Reporte Histórico (Por Alumno)"])
+            
+            # PESTAÑA 1: Lo que ya tenías (Todo el grupo, una semana)
+            with tab1:
+                sem_m = st.selectbox("Semana para reporte grupal:", listado_hojas)
+                if st.button("🚀 GENERAR PDF GRUPAL"):
+                    with st.spinner("Generando..."):
+                        df_m = cargar_datos(sem_m)
+                        pdf_m = FPDF()
+                        for _, f in df_m.iterrows(): 
+                            crear_hoja_alumno_pdf(pdf_m, f.to_dict(), sem_m, es_grupal=True)
+                        pdf_bytes = bytes(pdf_m.output())
+                        st.download_button(label=f"📥 Descargar {sem_m}", data=pdf_bytes, file_name=f"Grupo_6B_{sem_m}.pdf", mime="application/pdf")
+                        registrar_en_bitacora("MAESTRO", NOMBRE_MAESTRO, sem_m, "Descarga Masiva")
+            
+            # PESTAÑA 2: La nueva función (Un alumno, todas las semanas)
+            with tab2:
+                mat_hist = st.text_input("Matrícula del alumno a buscar:")
+                if st.button("🚀 GENERAR PDF HISTÓRICO"):
+                    if mat_hist.strip() == "":
+                        st.warning("Por favor, ingresa una matrícula.")
+                    else:
+                        with st.spinner("Buscando en todas las semanas..."):
+                            pdf_hist = FPDF()
+                            hubo_datos = False
+                            nombre_alumno_hist = ""
+                            
+                            # Revisamos cada hoja (semana) de tu Google Sheets
+                            for sem in listado_hojas:
+                                df_h = cargar_datos(sem)
+                                df_h.columns = [str(c).strip() for c in df_h.columns]
+                                col_m = [c for c in df_h.columns if "MATRICULA" in c.upper()]
+                                
+                                if col_m:
+                                    df_h['BUSCAR'] = df_h[col_m[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
+                                    fila = df_h[df_h['BUSCAR'] == mat_hist.strip()]
+                                    
+                                    # Si el alumno está en esta semana, lo agregamos al PDF
+                                    if not fila.empty:
+                                        hubo_datos = True
+                                        datos_al = fila.iloc[0].to_dict()
+                                        
+                                        # Guardamos el nombre para el archivo final
+                                        if nombre_alumno_hist == "":
+                                            nombre_alumno_hist = f"{datos_al.get('PATERNO', '')}_{datos_al.get('NOMBRE', '')}".strip()
+                                            
+                                        # Añadimos la página al PDF
+                                        crear_hoja_alumno_pdf(pdf_hist, datos_al, sem, es_grupal=False)
+                            
+                            # Si encontramos al alumno en al menos una semana, mostramos el botón de descarga
+                            if hubo_datos:
+                                pdf_bytes_hist = bytes(pdf_hist.output())
+                                st.download_button(
+                                    label=f"📥 Descargar Histórico de {nombre_alumno_hist}", 
+                                    data=pdf_bytes_hist, 
+                                    file_name=f"Historico_{nombre_alumno_hist}_{mat_hist.strip()}.pdf", 
+                                    mime="application/pdf"
+                                )
+                                registrar_en_bitacora("MAESTRO", NOMBRE_MAESTRO, "TODAS", f"Descarga Histórica {mat_hist}")
+                            else:
+                                st.error("❌ Matrícula no encontrada en ninguna de las semanas registradas.")
     st.markdown("---")
     with st.expander("🔐 Acceso Maestro"):
         pw = st.text_input("Contraseña:", type="password")
