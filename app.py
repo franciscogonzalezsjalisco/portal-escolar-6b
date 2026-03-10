@@ -180,10 +180,43 @@ if st.session_state.pantalla == 'inicio':
                     st.session_state.pantalla = 'matricula'; st.rerun()
     st.markdown("---")
     
-   # --- ACCESO MAESTRO ---
+  # --- ACCESO MAESTRO ---
     with st.expander("🔐 Acceso Maestro"):
         pw = st.text_input("Contraseña:", type="password")
         if pw == PASS_MAESTRO:
+            
+            # --- NUEVA LÓGICA: Extraer la lista de alumnos automáticamente ---
+            # Usamos la primera hoja disponible para construir un diccionario de {Nombre: Matrícula}
+            df_alumnos = cargar_datos(listado_hojas[0])
+            # Aseguramos que los nombres de las columnas estén en mayúsculas para no fallar
+            df_alumnos.columns = [str(c).strip().upper() for c in df_alumnos.columns] 
+            
+            diccionario_alumnos = {}
+            col_m = [c for c in df_alumnos.columns if "MATRICULA" in c]
+            
+            if col_m:
+                col_matricula = col_m[0]
+                for _, row in df_alumnos.iterrows():
+                    mat = str(row[col_matricula]).replace('.0', '').strip()
+                    # Verificamos que sea una matrícula válida
+                    if mat and mat != 'NAN':
+                        pat = str(row.get('PATERNO', '')).strip()
+                        mat_ape = str(row.get('MATERNO', '')).strip()
+                        nom = str(row.get('NOMBRE', '')).strip()
+                        
+                        # Limpiamos textos vacíos o nulos
+                        pat = "" if pat == "NAN" else pat
+                        mat_ape = "" if mat_ape == "NAN" else mat_ape
+                        nom = "" if nom == "NAN" else nom
+                        
+                        # Armamos el nombre empezando por apellidos
+                        nombre_completo = f"{pat} {mat_ape} {nom}".strip()
+                        if nombre_completo:
+                            diccionario_alumnos[nombre_completo] = mat
+            
+            # Ordenamos los nombres alfabéticamente
+            nombres_ordenados = sorted(diccionario_alumnos.keys())
+            
             # Creamos dos pestañas para organizar las descargas
             tab1, tab2 = st.tabs(["👥 Reporte Grupal", "👤 Reporte Histórico / Especializado"])
             
@@ -202,19 +235,25 @@ if st.session_state.pantalla == 'inicio':
             
             # PESTAÑA 2: Un alumno, selección de semanas específicas
             with tab2:
-                mat_hist = st.text_input("Matrícula del alumno a buscar:")
                 
-                # NUEVO: Selector múltiple de semanas (funciona como casillas de verificación)
-                st.markdown("**Selecciona las semanas a incluir en el reporte:**")
+                # NUEVO: Menú desplegable inteligente
+                if nombres_ordenados:
+                    alumno_seleccionado = st.selectbox("🧑‍🎓 Selecciona al alumno:", nombres_ordenados)
+                    mat_hist = diccionario_alumnos[alumno_seleccionado] # Sacamos la matrícula invisiblemente
+                else:
+                    st.warning("No se pudo cargar la lista de alumnos automáticamente.")
+                    mat_hist = st.text_input("Ingresa la matrícula del alumno a buscar:")
+                
+                st.markdown("**📅 Selecciona las semanas a incluir en el reporte:**")
                 semanas_seleccionadas = st.multiselect(
                     "Semanas disponibles:", 
                     options=listado_hojas, 
-                    default=listado_hojas # Por defecto, selecciona todas para mayor comodidad
+                    default=listado_hojas 
                 )
                 
                 if st.button("🚀 GENERAR REPORTE ESPECIALIZADO"):
                     if mat_hist.strip() == "":
-                        st.warning("⚠️ Por favor, ingresa una matrícula.")
+                        st.warning("⚠️ Por favor, asegúrate de que haya un alumno seleccionado.")
                     elif len(semanas_seleccionadas) == 0:
                         st.warning("⚠️ Por favor, selecciona al menos una semana.")
                     else:
@@ -223,14 +262,13 @@ if st.session_state.pantalla == 'inicio':
                             hubo_datos = False
                             nombre_alumno_hist = ""
                             
-                            # Ahora el ciclo solo recorre las semanas que elegiste en la pantalla
                             for sem in semanas_seleccionadas:
                                 df_h = cargar_datos(sem)
                                 df_h.columns = [str(c).strip() for c in df_h.columns]
-                                col_m = [c for c in df_h.columns if "MATRICULA" in c.upper()]
+                                col_m_hist = [c for c in df_h.columns if "MATRICULA" in c.upper()]
                                 
-                                if col_m:
-                                    df_h['BUSCAR'] = df_h[col_m[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
+                                if col_m_hist:
+                                    df_h['BUSCAR'] = df_h[col_m_hist[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
                                     fila = df_h[df_h['BUSCAR'] == mat_hist.strip()]
                                     
                                     if not fila.empty:
@@ -245,12 +283,12 @@ if st.session_state.pantalla == 'inicio':
                                 st.download_button(
                                     label=f"📥 Descargar Reporte de {nombre_alumno_hist}", 
                                     data=pdf_bytes_hist, 
-                                    file_name=f"Reporte_Especializado_{nombre_alumno_hist}_{mat_hist.strip()}.pdf", 
+                                    file_name=f"Reporte_Especializado_{nombre_alumno_hist}.pdf", 
                                     mime="application/pdf"
                                 )
                                 registrar_en_bitacora("MAESTRO", NOMBRE_MAESTRO, "ESPECIALIZADO", f"Descarga {mat_hist}")
                             else:
-                                st.error("❌ Matrícula no encontrada en las semanas seleccionadas.")
+                                st.error("❌ Alumno no encontrado en las semanas seleccionadas.")
 
 elif st.session_state.pantalla == 'matricula':
     st.markdown(f"<h4 style='text-align: center;'>📍 {st.session_state.semana_activa}</h4>", unsafe_allow_html=True)
