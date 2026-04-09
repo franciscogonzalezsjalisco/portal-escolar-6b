@@ -278,65 +278,6 @@ elif st.session_state.pantalla == 'matricula':
             else: st.error("❌ Matrícula no encontrada")
     if st.button("⬅️ VOLVER"): st.session_state.pantalla = 'inicio'; st.rerun()
 
-    # --- SECCIÓN DE REPORTES MENSUALES PARA PADRES ---
-    st.markdown("---")
-    st.markdown("<h3 style='text-align: center; color: #1D3557;'>📅 Historial Mensual</h3>", unsafe_allow_html=True)
-    st.info("Descarga un archivo PDF que agrupa todas las evaluaciones del mes seleccionado.")
-    
-    reportes_mensuales = {
-        "Marzo": ["T3 Del 17 al 20 de Marzo", "T3 Del 23 al 25 de Marzo"],
-        "Abril": ["T3 Del 13 al 17 de Abril", "T3 Del 20 al 25 de Abril", "T3 Del 27 al 30 de Abril"],
-        "Mayo": ["T3 Del 4 al 8 de Mayo", "T3 Del 11 al 15 de Mayo", "T3 Del 18 al 22 de Mayo", "T3 Del 25 al 29 de Mayo"],
-        "Junio": ["T3 Del 1 al 5 de Junio", "T3 Del 8 al 12 de Junio", "T3 Del 15 al 19 de Junio", "T3 Del 22 al 26 de Junio"]
-    }
-    
-    col_m1, col_m2 = st.columns()
-    
-    with col_m1:
-        opcion_mes = st.selectbox("Selecciona el mes a consultar:", list(reportes_mensuales.keys()))
-    
-    with col_m2:
-        st.markdown("<br>", unsafe_allow_html=True) 
-        if st.button(f"🚀 Generar {opcion_mes}"):
-            semanas_del_mes = reportes_mensuales[opcion_mes]
-            semanas_validas = [sem for sem in semanas_del_mes if sem in listado_hojas]
-            
-            if len(semanas_validas) == 0:
-                st.warning(f"⏳ Aún no hay evaluaciones registradas para {opcion_mes}.")
-            else:
-                with st.spinner(f"Recopilando evaluaciones de {opcion_mes}..."):
-                    pdf_padres = FPDF()
-                    hubo_datos = False
-                    nombre_alumno = ""
-                    mat_padre = st.session_state.ID_USUARIO.strip() 
-                    
-                    for sem in semanas_validas:
-                        df_p = cargar_datos(sem)
-                        df_p.columns = [str(c).strip() for c in df_p.columns]
-                        col_m = [c for c in df_p.columns if "MATRICULA" in c.upper()]
-                        
-                        if col_m:
-                            df_p['BUSCAR'] = df_p[col_m].astype(str).str.replace('.0', '', regex=False).str.strip()
-                            fila = df_p[df_p['BUSCAR'] == mat_padre] 
-                            
-                            if not fila.empty:
-                                hubo_datos = True
-                                datos_al = fila.iloc.to_dict()
-                                if nombre_alumno == "": 
-                                    nombre_alumno = f"{datos_al.get('PATERNO', '')}_{datos_al.get('NOMBRE', '')}".strip()
-                                crear_hoja_alumno_pdf(pdf_padres, datos_al, f"{sem} ({opcion_mes})", es_grupal=False)
-                    
-                    if hubo_datos:
-                        st.download_button(
-                            label=f"📥 Guardar PDF de {opcion_mes}", 
-                            data=bytes(pdf_padres.output()), 
-                            file_name=f"Historial_{opcion_mes}_{nombre_alumno}.pdf", 
-                            mime="application/pdf"
-                        )
-                        registrar_en_bitacora("PADRE/ALUMNO", nombre_alumno, "MENSUAL", f"Descarga {opcion_mes}")
-                    else:
-                        st.error("❌ No se encontraron datos para tu matrícula en este mes.")
-
 elif st.session_state.pantalla == 'resultados':
     datos = st.session_state.alumno_datos
     nombre_c = f"{datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}"
