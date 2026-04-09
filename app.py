@@ -110,6 +110,7 @@ def sanear_texto(texto):
 
 def crear_hoja_alumno_pdf(pdf, datos, semana, es_grupal=False):
     pdf.add_page()
+    
     nombre_full = f"{datos.get('NOMBRE', '')} {datos.get('PATERNO', '')} {datos.get('MATERNO', '')}".strip()
     pdf.set_font("Helvetica", "B", 14)
     pdf.set_text_color(29, 53, 87)
@@ -172,6 +173,7 @@ if st.session_state.pantalla == 'inicio':
     with st.expander("🔐 Acceso Maestro"):
         pw = st.text_input("Contraseña:", type="password")
         if pw == PASS_MAESTRO:
+            
             df_alumnos = cargar_datos(listado_hojas)
             df_alumnos.columns = [str(c).strip().upper() for c in df_alumnos.columns] 
             
@@ -196,6 +198,7 @@ if st.session_state.pantalla == 'inicio':
                             diccionario_alumnos[nombre_completo] = mat
             
             nombres_ordenados = sorted(diccionario_alumnos.keys())
+            
             tab1, tab2 = st.tabs(["👥 Reporte Grupal", "👤 Reporte Histórico / Especializado"])
             
             with tab1:
@@ -213,7 +216,7 @@ if st.session_state.pantalla == 'inicio':
             with tab2:
                 if nombres_ordenados:
                     alumno_seleccionado = st.selectbox("🧑‍🎓 Selecciona al alumno:", nombres_ordenados)
-                    mat_hist = diccionario_alumnos[alumno_seleccionado]
+                    mat_hist = diccionario_alumnos[alumno_seleccionado] 
                 else:
                     st.warning("No se pudo cargar la lista de alumnos automáticamente.")
                     mat_hist = st.text_input("Ingresa la matrícula del alumno a buscar:")
