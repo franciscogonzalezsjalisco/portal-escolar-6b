@@ -12,8 +12,6 @@ st.set_page_config(page_title="Portal Escolar 6°B Urb. 690", layout="centered")
 
 NOMBRE_MAESTRO = "Profr. Francisco González"
 
-# MEJORA 1: Seguridad de la contraseña usando st.secrets (con un valor por defecto si no está configurado)
-# Para desarrollo local, crea un archivo en .streamlit/secrets.toml con: PASS_MAESTRO = "TuContraseñaSegura"
 PASS_MAESTRO = st.secrets.get("PASS_MAESTRO", "6B2026") 
 
 URL_ESCUDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/ESCUDO%20690%20(1).png"
@@ -98,9 +96,7 @@ def registrar_en_bitacora(matricula, nombre, semana, accion):
         params = {"fecha": ts, "matricula": str(matricula), "nombre": str(nombre), "semana": str(semana), "accion": str(accion)}
         headers = {"User-Agent": "Mozilla/5.0"}
         requests.get(URL_LOG_SCRIPT, params=params, headers=headers, timeout=10)
-        st.toast(f"Registro: {accion}", icon="✅")
     except Exception as e:
-        # MEJORA 2: Manejo de errores no silencioso
         print(f"Error al registrar en bitácora: {e}")
 
 def procesar_valor(val):
@@ -109,18 +105,11 @@ def procesar_valor(val):
     if v_str in ['1', '1.0', 'TRUE', 'VERDADERO']: return "✅ Completado"
     return str(val)
 
-# Función de apoyo para evitar errores de codificación en FPDF clásico (si no usas fpdf2)
 def sanear_texto(texto):
     return str(texto).encode('latin-1', 'replace').decode('latin-1')
 
 def crear_hoja_alumno_pdf(pdf, datos, semana, es_grupal=False):
     pdf.add_page()
-    
-    # MEJORA 4: (Opcional) Si subes un archivo Arial.ttf a tu repo, descomenta las siguientes dos líneas para soporte total de acentos/ñ
-    # pdf.add_font('ArialUnicode', '', 'Arial.ttf', uni=True)
-    # pdf.set_font("ArialUnicode", "", 14)
-    # Mientras tanto, usaremos sanear_texto() para evitar que la aplicación se caiga con caracteres especiales.
-    
     nombre_full = f"{datos.get('NOMBRE', '')} {datos.get('PATERNO', '')} {datos.get('MATERNO', '')}".strip()
     pdf.set_font("Helvetica", "B", 14)
     pdf.set_text_color(29, 53, 87)
@@ -159,7 +148,6 @@ def obtener_nombres_hojas(sid):
         print(f"Error al obtener hojas: {e}")
         return ["Semana 1"]
 
-# MEJORA 3: Caché para evitar saturar Google Sheets y hacer la app mucho más rápida (guarda los datos por 5 minutos)
 @st.cache_data(ttl=300)
 def cargar_datos(nombre_hoja):
     url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={quote(nombre_hoja)}&t={int(time.time())}"
@@ -180,47 +168,36 @@ if st.session_state.pantalla == 'inicio':
                     st.session_state.pantalla = 'matricula'; st.rerun()
     st.markdown("---")
     
-  # --- ACCESO MAESTRO ---
+    # --- ACCESO MAESTRO ---
     with st.expander("🔐 Acceso Maestro"):
         pw = st.text_input("Contraseña:", type="password")
         if pw == PASS_MAESTRO:
-            
-            # --- NUEVA LÓGICA: Extraer la lista de alumnos automáticamente ---
-            # Usamos la primera hoja disponible para construir un diccionario de {Nombre: Matrícula}
-            df_alumnos = cargar_datos(listado_hojas[0])
-            # Aseguramos que los nombres de las columnas estén en mayúsculas para no fallar
+            df_alumnos = cargar_datos(listado_hojas)
             df_alumnos.columns = [str(c).strip().upper() for c in df_alumnos.columns] 
             
             diccionario_alumnos = {}
             col_m = [c for c in df_alumnos.columns if "MATRICULA" in c]
             
             if col_m:
-                col_matricula = col_m[0]
+                col_matricula = col_m
                 for _, row in df_alumnos.iterrows():
                     mat = str(row[col_matricula]).replace('.0', '').strip()
-                    # Verificamos que sea una matrícula válida
                     if mat and mat != 'NAN':
                         pat = str(row.get('PATERNO', '')).strip()
                         mat_ape = str(row.get('MATERNO', '')).strip()
                         nom = str(row.get('NOMBRE', '')).strip()
                         
-                        # Limpiamos textos vacíos o nulos
                         pat = "" if pat == "NAN" else pat
                         mat_ape = "" if mat_ape == "NAN" else mat_ape
                         nom = "" if nom == "NAN" else nom
                         
-                        # Armamos el nombre empezando por apellidos
                         nombre_completo = f"{pat} {mat_ape} {nom}".strip()
                         if nombre_completo:
                             diccionario_alumnos[nombre_completo] = mat
             
-            # Ordenamos los nombres alfabéticamente
             nombres_ordenados = sorted(diccionario_alumnos.keys())
-            
-            # Creamos dos pestañas para organizar las descargas
             tab1, tab2 = st.tabs(["👥 Reporte Grupal", "👤 Reporte Histórico / Especializado"])
             
-            # PESTAÑA 1: Todo el grupo, una semana
             with tab1:
                 sem_m = st.selectbox("Semana para reporte grupal:", listado_hojas)
                 if st.button("🚀 GENERAR PDF GRUPAL"):
@@ -233,23 +210,16 @@ if st.session_state.pantalla == 'inicio':
                         st.download_button(label=f"📥 Descargar {sem_m}", data=pdf_bytes, file_name=f"Grupo_6B_{sem_m}.pdf", mime="application/pdf")
                         registrar_en_bitacora("MAESTRO", NOMBRE_MAESTRO, sem_m, "Descarga Masiva")
             
-            # PESTAÑA 2: Un alumno, selección de semanas específicas
             with tab2:
-                
-                # NUEVO: Menú desplegable inteligente
                 if nombres_ordenados:
                     alumno_seleccionado = st.selectbox("🧑‍🎓 Selecciona al alumno:", nombres_ordenados)
-                    mat_hist = diccionario_alumnos[alumno_seleccionado] # Sacamos la matrícula invisiblemente
+                    mat_hist = diccionario_alumnos[alumno_seleccionado]
                 else:
                     st.warning("No se pudo cargar la lista de alumnos automáticamente.")
                     mat_hist = st.text_input("Ingresa la matrícula del alumno a buscar:")
                 
                 st.markdown("**📅 Selecciona las semanas a incluir en el reporte:**")
-                semanas_seleccionadas = st.multiselect(
-                    "Semanas disponibles:", 
-                    options=listado_hojas, 
-                    default=listado_hojas 
-                )
+                semanas_seleccionadas = st.multiselect("Semanas disponibles:", options=listado_hojas, default=listado_hojas)
                 
                 if st.button("🚀 GENERAR REPORTE ESPECIALIZADO"):
                     if mat_hist.strip() == "":
@@ -268,12 +238,12 @@ if st.session_state.pantalla == 'inicio':
                                 col_m_hist = [c for c in df_h.columns if "MATRICULA" in c.upper()]
                                 
                                 if col_m_hist:
-                                    df_h['BUSCAR'] = df_h[col_m_hist[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
+                                    df_h['BUSCAR'] = df_h[col_m_hist].astype(str).str.replace('.0', '', regex=False).str.strip()
                                     fila = df_h[df_h['BUSCAR'] == mat_hist.strip()]
                                     
                                     if not fila.empty:
                                         hubo_datos = True
-                                        datos_al = fila.iloc[0].to_dict()
+                                        datos_al = fila.iloc.to_dict()
                                         if nombre_alumno_hist == "":
                                             nombre_alumno_hist = f"{datos_al.get('PATERNO', '')}_{datos_al.get('NOMBRE', '')}".strip()
                                         crear_hoja_alumno_pdf(pdf_hist, datos_al, sem, es_grupal=False)
@@ -299,67 +269,45 @@ elif st.session_state.pantalla == 'matricula':
         df.columns = [str(c).strip() for c in df.columns]
         col_m = [c for c in df.columns if "MATRICULA" in c.upper()]
         if col_m:
-            df['BUSCAR'] = df[col_m[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
+            df['BUSCAR'] = df[col_m].astype(str).str.replace('.0', '', regex=False).str.strip()
             fila = df[df['BUSCAR'] == st.session_state.ID_USUARIO]
             if not fila.empty:
-                st.session_state.alumno_datos = fila.iloc[0].to_dict()
+                st.session_state.alumno_datos = fila.iloc.to_dict()
                 registrar_en_bitacora(st.session_state.ID_USUARIO, st.session_state.alumno_datos.get('NOMBRE',''), st.session_state.semana_activa, "Ingreso")
                 st.session_state.pantalla = 'resultados'; st.rerun()
             else: st.error("❌ Matrícula no encontrada")
     if st.button("⬅️ VOLVER"): st.session_state.pantalla = 'inicio'; st.rerun()
-# --- SECCIÓN DE REPORTES MENSUALES PARA PADRES ---
+
+    # --- SECCIÓN DE REPORTES MENSUALES PARA PADRES ---
     st.markdown("---")
     st.markdown("<h3 style='text-align: center; color: #1D3557;'>📅 Historial Mensual</h3>", unsafe_allow_html=True)
     st.info("Descarga un archivo PDF que agrupa todas las evaluaciones del mes seleccionado.")
     
-    # El diccionario con los nombres exactos que nos proporcionaste
     reportes_mensuales = {
-        "Marzo": [
-            "T3 Del 17 al 20 de Marzo", 
-            "T3 Del 23 al 25 de Marzo"
-        ],
-        "Abril": [
-            "T3 Del 13 al 17 de Abril", 
-            "T3 Del 20 al 25 de Abril", 
-            "T3 Del 27 al 30 de Abril"
-        ],
-        "Mayo": [
-            "T3 Del 4 al 8 de Mayo", 
-            "T3 Del 11 al 15 de Mayo", 
-            "T3 Del 18 al 22 de Mayo", 
-            "T3 Del 25 al 29 de Mayo"
-        ],
-        "Junio": [
-            "T3 Del 1 al 5 de Junio", 
-            "T3 Del 8 al 12 de Junio", 
-            "T3 Del 15 al 19 de Junio", 
-            "T3 Del 22 al 26 de Junio"
-        ]
+        "Marzo": ["T3 Del 17 al 20 de Marzo", "T3 Del 23 al 25 de Marzo"],
+        "Abril": ["T3 Del 13 al 17 de Abril", "T3 Del 20 al 25 de Abril", "T3 Del 27 al 30 de Abril"],
+        "Mayo": ["T3 Del 4 al 8 de Mayo", "T3 Del 11 al 15 de Mayo", "T3 Del 18 al 22 de Mayo", "T3 Del 25 al 29 de Mayo"],
+        "Junio": ["T3 Del 1 al 5 de Junio", "T3 Del 8 al 12 de Junio", "T3 Del 15 al 19 de Junio", "T3 Del 22 al 26 de Junio"]
     }
     
-    # Creamos dos columnas para alinear el menú y el botón (Corregido con)
     col_m1, col_m2 = st.columns()
     
     with col_m1:
         opcion_mes = st.selectbox("Selecciona el mes a consultar:", list(reportes_mensuales.keys()))
     
     with col_m2:
-        st.markdown("<br>", unsafe_allow_html=True) # Espacio para alinear
+        st.markdown("<br>", unsafe_allow_html=True) 
         if st.button(f"🚀 Generar {opcion_mes}"):
             semanas_del_mes = reportes_mensuales[opcion_mes]
-            
-            # Filtro de seguridad: Solo busca en las pestañas que YA subiste al Excel
             semanas_validas = [sem for sem in semanas_del_mes if sem in listado_hojas]
             
             if len(semanas_validas) == 0:
-                st.warning(f"⏳ Aún no hay evaluaciones registradas en el sistema para el mes de {opcion_mes}.")
+                st.warning(f"⏳ Aún no hay evaluaciones registradas para {opcion_mes}.")
             else:
                 with st.spinner(f"Recopilando evaluaciones de {opcion_mes}..."):
                     pdf_padres = FPDF()
                     hubo_datos = False
                     nombre_alumno = ""
-                    
-                    # Corregido: Usamos ID_USUARIO que es la variable real que declaraste arriba
                     mat_padre = st.session_state.ID_USUARIO.strip() 
                     
                     for sem in semanas_validas:
@@ -368,13 +316,11 @@ elif st.session_state.pantalla == 'matricula':
                         col_m = [c for c in df_p.columns if "MATRICULA" in c.upper()]
                         
                         if col_m:
-                            # Corregido: Agregado el
                             df_p['BUSCAR'] = df_p[col_m].astype(str).str.replace('.0', '', regex=False).str.strip()
                             fila = df_p[df_p['BUSCAR'] == mat_padre] 
                             
                             if not fila.empty:
                                 hubo_datos = True
-                                # Corregido: Agregado el
                                 datos_al = fila.iloc.to_dict()
                                 if nombre_alumno == "": 
                                     nombre_alumno = f"{datos_al.get('PATERNO', '')}_{datos_al.get('NOMBRE', '')}".strip()
@@ -402,10 +348,10 @@ elif st.session_state.pantalla == 'resultados':
         st.session_state.semana_activa = nueva_s
         df_n = cargar_datos(nueva_s); df_n.columns = [str(c).strip() for c in df_n.columns]
         col_m = [c for c in df_n.columns if "MATRICULA" in c.upper()]
-        df_n['BUSCAR'] = df_n[col_m[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
+        df_n['BUSCAR'] = df_n[col_m].astype(str).str.replace('.0', '', regex=False).str.strip()
         fila = df_n[df_n['BUSCAR'] == st.session_state.ID_USUARIO]
         if not fila.empty:
-            st.session_state.alumno_datos = fila.iloc[0].to_dict()
+            st.session_state.alumno_datos = fila.iloc.to_dict()
             registrar_en_bitacora(st.session_state.ID_USUARIO, nombre_c, nueva_s, "Cambio Semana")
             st.rerun()
 
