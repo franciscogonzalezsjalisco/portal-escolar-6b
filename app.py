@@ -337,7 +337,7 @@ elif st.session_state.pantalla == 'matricula':
         ]
     }
     
-    # Creamos dos columnas para alinear el menú y el botón
+    # Creamos dos columnas para alinear el menú y el botón (Corregido con)
     col_m1, col_m2 = st.columns()
     
     with col_m1:
@@ -359,7 +359,8 @@ elif st.session_state.pantalla == 'matricula':
                     hubo_datos = False
                     nombre_alumno = ""
                     
-                    mat_padre = st.session_state.matricula.strip() 
+                    # Corregido: Usamos ID_USUARIO que es la variable real que declaraste arriba
+                    mat_padre = st.session_state.ID_USUARIO.strip() 
                     
                     for sem in semanas_validas:
                         df_p = cargar_datos(sem)
@@ -367,11 +368,13 @@ elif st.session_state.pantalla == 'matricula':
                         col_m = [c for c in df_p.columns if "MATRICULA" in c.upper()]
                         
                         if col_m:
+                            # Corregido: Agregado el
                             df_p['BUSCAR'] = df_p[col_m].astype(str).str.replace('.0', '', regex=False).str.strip()
                             fila = df_p[df_p['BUSCAR'] == mat_padre] 
                             
                             if not fila.empty:
                                 hubo_datos = True
+                                # Corregido: Agregado el
                                 datos_al = fila.iloc.to_dict()
                                 if nombre_alumno == "": 
                                     nombre_alumno = f"{datos_al.get('PATERNO', '')}_{datos_al.get('NOMBRE', '')}".strip()
