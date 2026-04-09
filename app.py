@@ -338,7 +338,7 @@ elif st.session_state.pantalla == 'matricula':
     }
     
     # Creamos dos columnas para alinear el menú y el botón
-    col_m1, col_m2 = st.columns()
+    col_m1 , col_m2 = st.columns()
     
     with col_m1:
         opcion_mes = st.selectbox("Selecciona el mes a consultar:", list(reportes_mensuales.keys()))
