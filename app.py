@@ -292,7 +292,8 @@ elif st.session_state.pantalla == 'resultados':
         st.session_state.semana_activa = nueva_s
         df_n = cargar_datos(nueva_s); df_n.columns = [str(c).strip() for c in df_n.columns]
         col_m = [c for c in df_n.columns if "MATRICULA" in c.upper()]
-        df_n['BUSCAR'] = df_n[col_m].astype(str).str.replace('.0', '', regex=False).str.strip()
+        if col_m:
+            df_n['BUSCAR'] = df_n[col_m].astype(str).str.replace('.0', '', regex=False).str.strip()
         fila = df_n[df_n['BUSCAR'] == st.session_state.ID_USUARIO]
         if not fila.empty:
             st.session_state.alumno_datos = fila.iloc.to_dict()
