@@ -10,7 +10,7 @@ import time
 # =====================================================================
 # ⚙️ 1. BLOQUE DE CONFIGURACIÓN
 # =====================================================================
-st.set_page_config(page_title='Portal Escolar 6° "B" Urb. 1115', layout="centered")
+st.set_page_config(page_title='Portal Escolar 6° "B" Urb. 690', layout="centered")
 
 NOMBRE_MAESTRO = "Mtro. Francisco González"
 PASS_MAESTRO = st.secrets.get("PASS_MAESTRO", "52627")
