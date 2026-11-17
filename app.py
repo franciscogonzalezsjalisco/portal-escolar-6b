@@ -7,21 +7,33 @@ import pytz
 from urllib.parse import quote
 import time
 
-# 1. CONFIGURACIÓN E IDENTIDAD
-st.set_page_config(page_title="Portal Escolar 6°B Urb. 690", layout="centered")
+# =====================================================================
+# ⚙️ 1. BLOQUE DE CONFIGURACIÓN
+# =====================================================================
+st.set_page_config(page_title='Portal Escolar 6° "B" Urb. 690', layout="centered")
 
-NOMBRE_MAESTRO = "Profr. Francisco González"
+NOMBRE_MAESTRO = "Mtro. Francisco González"
+PASS_MAESTRO = st.secrets.get("PASS_MAESTRO", "6B2627")
 
-# MEJORA 1: Seguridad de la contraseña usando st.secrets (con un valor por defecto si no está configurado)
-# Para desarrollo local, crea un archivo en .streamlit/secrets.toml con: PASS_MAESTRO = "TuContraseñaSegura"
-PASS_MAESTRO = st.secrets.get("PASS_MAESTRO", "6B2026") 
+# 📚 Bases de datos por Trimestre (Mtro. Francisco González - 6° "B")
+TRIMESTRES = {
+    "1er Trimestre": st.secrets.get("SHEET_ID_T1", "2PACX-1vRxU9rDuWZHBBJkJltSqm0rDiRiT0wX6gBxXlY_IULzuY5X7OP5a0JvSzn9op1yhcCZL6torxhtJyeD"),
+    "2do Trimestre": st.secrets.get("SHEET_ID_T2", "2PACX-1vRI3MfceVBH1QYcFYj7TULCWo5kXMlyk_5XvlI-JKVBFuuno6B-wpdpOXpvyMaP13dxlrt5vXHFOPS0"),
+    "3er Trimestre": st.secrets.get("SHEET_ID_T3", "2PACX-1vTvMUqU6TddwSi8zWkvYwegH5UpEV8SdPw6xp8nQET8AtZIrZFzfNrNjGrOThVzM7QhfLTllx1U1UTa"),
+}
 
-URL_ESCUDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/ESCUDO%20690%20(1).png"
-URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
-SHEET_ID = "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"
-URL_LOG_SCRIPT = "https://script.google.com/macros/s/AKfycbwNGbSsky_dCyzvhf0WGfWj0mJMxR74Jrz2jmpIkJYLUDsH07cTCQjgbKO2E-TlaN_G/exec"
+# 📝 URL de la Bitácora
+URL_LOG_SCRIPT = st.secrets.get("URL_LOG_SCRIPT", "https://script.google.com/macros/s/AKfycbwo4om2BBTb3dgDAj4uf1bIXkSiE1wJxpWhrevqmKMvevRJHmKh7uDWtI2yuaiCc9Ra/exec")
 
+# 🎨 Enlaces de imágenes en GitHub
+URL_ESCUDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-felipe_gonzalez/52819c17985cf4ea867bfe8741a9272d61e1fbd4/WhatsApp%20Image%202026-07-17%20at%2014.37.28.jpeg"
+URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-felipe_gonzalez/a14b8851f0aa4863b5d7d992d18a9e34c85acd9d/bosque-con-vegetacion-de-tonos-violetas-y-lavanda-ruinas-de-wyveria-de-monster-hunter-wilds_3840x2160_xtrafondos.com.jpg"
+
+# =====================================================================
+
+# Inicialización del estado de la app
 if 'pantalla' not in st.session_state: st.session_state.pantalla = 'inicio'
+if 'trimestre_activa' not in st.session_state: st.session_state.trimestre_activa = "1er Trimestre"
 if 'semana_activa' not in st.session_state: st.session_state.semana_activa = None
 if 'ID_USUARIO' not in st.session_state: st.session_state.ID_USUARIO = ""
 if 'alumno_datos' not in st.session_state: st.session_state.alumno_datos = None
@@ -85,8 +97,8 @@ st.markdown(f"""
 st.markdown(f"""
     <div style='text-align: center;'>
         <img src="{URL_ESCUDO}" width="120" style="margin-bottom: 10px;">
-        <h2 style='margin-top:0;'>URBANA 690</h2>
-        <h4 style='color: #457B9D !important;'>6° Grado Grupo B</h4>
+        <h2 style='margin-top:0;'>URBANA 1115</h2>
+        <h4 style='color: #457B9D !important;'>6° "B"</h4>
     </div>
     """, unsafe_allow_html=True)
 st.markdown("---")
@@ -97,11 +109,11 @@ def registrar_en_bitacora(matricula, nombre, semana, accion):
         ts = datetime.now(pytz.timezone('America/Mexico_City')).strftime("%d/%m/%Y %H:%M:%S")
         params = {"fecha": ts, "matricula": str(matricula), "nombre": str(nombre), "semana": str(semana), "accion": str(accion)}
         headers = {"User-Agent": "Mozilla/5.0"}
-        requests.get(URL_LOG_SCRIPT, params=params, headers=headers, timeout=10)
-        st.toast(f"Registro: {accion}", icon="✅")
+        respuesta = requests.get(URL_LOG_SCRIPT, params=params, headers=headers, timeout=10)
+        if respuesta.status_code == 200:
+            st.toast(f"Bitácora: {accion}", icon="✅")
     except Exception as e:
-        # MEJORA 2: Manejo de errores no silencioso
-        print(f"Error al registrar en bitácora: {e}")
+        print(f"Error crítico al conectar con la bitácora: {e}")
 
 def procesar_valor(val):
     v_str = str(val).strip().upper()
@@ -109,17 +121,11 @@ def procesar_valor(val):
     if v_str in ['1', '1.0', 'TRUE', 'VERDADERO']: return "✅ Completado"
     return str(val)
 
-# Función de apoyo para evitar errores de codificación en FPDF clásico (si no usas fpdf2)
 def sanear_texto(texto):
     return str(texto).encode('latin-1', 'replace').decode('latin-1')
 
-def crear_hoja_alumno_pdf(pdf, datos, semana, es_grupal=False):
+def crear_hoja_alumno_pdf(pdf, datos, trimestre, semana, es_grupal=False):
     pdf.add_page()
-    
-    # MEJORA 4: (Opcional) Si subes un archivo Arial.ttf a tu repo, descomenta las siguientes dos líneas para soporte total de acentos/ñ
-    # pdf.add_font('ArialUnicode', '', 'Arial.ttf', uni=True)
-    # pdf.set_font("ArialUnicode", "", 14)
-    # Mientras tanto, usaremos sanear_texto() para evitar que la aplicación se caiga con caracteres especiales.
     
     nombre_full = f"{datos.get('NOMBRE', '')} {datos.get('PATERNO', '')} {datos.get('MATERNO', '')}".strip()
     pdf.set_font("Helvetica", "B", 14)
@@ -127,7 +133,7 @@ def crear_hoja_alumno_pdf(pdf, datos, semana, es_grupal=False):
     pdf.cell(0, 10, sanear_texto(f"REPORTE ESCOLAR: {nombre_full}"), ln=True, align="C")
     
     pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 7, sanear_texto(f"Semana: {semana} | Maestro: {NOMBRE_MAESTRO}"), ln=True, align="C")
+    pdf.cell(0, 7, sanear_texto(f'6° "B" | {trimestre} | {semana} | {NOMBRE_MAESTRO}'), ln=True, align="C")
     pdf.ln(5)
     
     pdf.set_fill_color(29, 53, 87); pdf.set_text_color(255, 255, 255)
@@ -149,153 +155,170 @@ def crear_hoja_alumno_pdf(pdf, datos, semana, es_grupal=False):
         ts = datetime.now(pytz.timezone('America/Mexico_City')).strftime("%d/%m/%Y %H:%M:%S")
         pdf.multi_cell(0, 5, sanear_texto(f"Descarga oficial: {ts} hrs.\nMatrícula: {datos.get('MATRICULA','')}"), align='C')
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=15)
 def obtener_nombres_hojas(sid):
     try:
-        url = f"https://docs.google.com/spreadsheets/d/{sid}/export?format=xlsx"
+        if sid.startswith("2PACX-"):
+            url = f"https://docs.google.com/spreadsheets/d/e/{sid}/pub?output=xlsx"
+        else:
+            url = f"https://docs.google.com/spreadsheets/d/{sid}/export?format=xlsx"
         xls = pd.ExcelFile(url, engine='openpyxl')
         return xls.sheet_names
     except Exception as e: 
         print(f"Error al obtener hojas: {e}")
-        return ["Semana 1"]
+        return []
 
-# MEJORA 3: Caché para evitar saturar Google Sheets y hacer la app mucho más rápida (guarda los datos por 5 minutos)
-@st.cache_data(ttl=300)
-def cargar_datos(nombre_hoja):
-    url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={quote(nombre_hoja)}&t={int(time.time())}"
-    return pd.read_csv(url)
+@st.cache_data(ttl=15)
+def cargar_datos(sid, nombre_hoja):
+    if sid.startswith("2PACX-"):
+        url = f"https://docs.google.com/spreadsheets/d/e/{sid}/pub?output=xlsx&t={int(time.time())}"
+        return pd.read_excel(url, sheet_name=nombre_hoja, engine='openpyxl')
+    else:
+        url = f"https://docs.google.com/spreadsheets/d/{sid}/gviz/tq?tqx=out:csv&sheet={quote(nombre_hoja)}&t={int(time.time())}"
+        return pd.read_csv(url)
 
 # --- FLUJO DE PANTALLAS ---
-listado_hojas = obtener_nombres_hojas(SHEET_ID)
+nombres_trimestres = list(TRIMESTRES.keys())
 
 if st.session_state.pantalla == 'inicio':
-    st.markdown("<h4 style='text-align: center;'>Selecciona la semana</h4>", unsafe_allow_html=True)
-    for i in range(0, len(listado_hojas), 2):
-        cols = st.columns(2)
-        for j in range(2):
-            idx = i + j
-            if idx < len(listado_hojas):
-                if cols[j].button(listado_hojas[idx], key=f"btn_{idx}"):
-                    st.session_state.semana_activa = listado_hojas[idx]
-                    st.session_state.pantalla = 'matricula'; st.rerun()
+    idx_t = nombres_trimestres.index(st.session_state.trimestre_activa)
+    trim_sel = st.selectbox("📚 **Selecciona el Trimestre:**", nombres_trimestres, index=idx_t)
+    if trim_sel != st.session_state.trimestre_activa:
+        st.session_state.trimestre_activa = trim_sel
+        st.rerun()
+
+    sid_actual = TRIMESTRES[st.session_state.trimestre_activa]
+    listado_hojas = obtener_nombres_hojas(sid_actual)
+
+    if not listado_hojas:
+        st.warning("⚠️ No se pudieron leer las pestañas de este trimestre. Verifica en Google Sheets > Archivo > Compartir > Publicar en la web que esté publicado 'Todo el documento'.")
+    else:
+        st.markdown("<h4 style='text-align: center;'>Selecciona la semana</h4>", unsafe_allow_html=True)
+        for i in range(0, len(listado_hojas), 2):
+            cols = st.columns(2)
+            for j in range(2):
+                idx = i + j
+                if idx < len(listado_hojas):
+                    if cols[j].button(listado_hojas[idx], key=f"btn_{idx}"):
+                        st.session_state.semana_activa = listado_hojas[idx]
+                        st.session_state.pantalla = 'matricula'; st.rerun()
     st.markdown("---")
     
-  # --- ACCESO MAESTRO ---
+    # --- ACCESO MAESTRO ---
     with st.expander("🔐 Acceso Maestro"):
         pw = st.text_input("Contraseña:", type="password")
         if pw == PASS_MAESTRO:
-            
-            # --- NUEVA LÓGICA: Extraer la lista de alumnos automáticamente ---
-            # Usamos la primera hoja disponible para construir un diccionario de {Nombre: Matrícula}
-            df_alumnos = cargar_datos(listado_hojas[0])
-            # Aseguramos que los nombres de las columnas estén en mayúsculas para no fallar
-            df_alumnos.columns = [str(c).strip().upper() for c in df_alumnos.columns] 
-            
-            diccionario_alumnos = {}
-            col_m = [c for c in df_alumnos.columns if "MATRICULA" in c]
-            
-            if col_m:
-                col_matricula = col_m[0]
-                for _, row in df_alumnos.iterrows():
-                    mat = str(row[col_matricula]).replace('.0', '').strip()
-                    # Verificamos que sea una matrícula válida
-                    if mat and mat != 'NAN':
-                        pat = str(row.get('PATERNO', '')).strip()
-                        mat_ape = str(row.get('MATERNO', '')).strip()
-                        nom = str(row.get('NOMBRE', '')).strip()
-                        
-                        # Limpiamos textos vacíos o nulos
-                        pat = "" if pat == "NAN" else pat
-                        mat_ape = "" if mat_ape == "NAN" else mat_ape
-                        nom = "" if nom == "NAN" else nom
-                        
-                        # Armamos el nombre empezando por apellidos
-                        nombre_completo = f"{pat} {mat_ape} {nom}".strip()
-                        if nombre_completo:
-                            diccionario_alumnos[nombre_completo] = mat
-            
-            # Ordenamos los nombres alfabéticamente
-            nombres_ordenados = sorted(diccionario_alumnos.keys())
-            
-            # Creamos dos pestañas para organizar las descargas
-            tab1, tab2 = st.tabs(["👥 Reporte Grupal", "👤 Reporte Histórico / Especializado"])
-            
-            # PESTAÑA 1: Todo el grupo, una semana
-            with tab1:
-                sem_m = st.selectbox("Semana para reporte grupal:", listado_hojas)
-                if st.button("🚀 GENERAR PDF GRUPAL"):
-                    with st.spinner("Generando..."):
-                        df_m = cargar_datos(sem_m)
-                        pdf_m = FPDF()
-                        for _, f in df_m.iterrows(): 
-                            crear_hoja_alumno_pdf(pdf_m, f.to_dict(), sem_m, es_grupal=True)
-                        pdf_bytes = bytes(pdf_m.output())
-                        st.download_button(label=f"📥 Descargar {sem_m}", data=pdf_bytes, file_name=f"Grupo_6B_{sem_m}.pdf", mime="application/pdf")
-                        registrar_en_bitacora("MAESTRO", NOMBRE_MAESTRO, sem_m, "Descarga Masiva")
-            
-            # PESTAÑA 2: Un alumno, selección de semanas específicas
-            with tab2:
+            trim_maestro = st.selectbox("📚 Trimestre a consultar:", nombres_trimestres, key="trim_maestro")
+            sid_maestro = TRIMESTRES[trim_maestro]
+            hojas_maestro = obtener_nombres_hojas(sid_maestro)
+
+            if not hojas_maestro:
+                st.warning("⚠️ No se pudo acceder a las hojas de este trimestre.")
+            else:
+                df_alumnos = cargar_datos(sid_maestro, hojas_maestro[0])
+                df_alumnos.columns = [str(c).strip().upper() for c in df_alumnos.columns] 
                 
-                # NUEVO: Menú desplegable inteligente
-                if nombres_ordenados:
-                    alumno_seleccionado = st.selectbox("🧑‍🎓 Selecciona al alumno:", nombres_ordenados)
-                    mat_hist = diccionario_alumnos[alumno_seleccionado] # Sacamos la matrícula invisiblemente
-                else:
-                    st.warning("No se pudo cargar la lista de alumnos automáticamente.")
-                    mat_hist = st.text_input("Ingresa la matrícula del alumno a buscar:")
+                diccionario_alumnos = {}
+                col_m = [c for c in df_alumnos.columns if "MATRICULA" in c]
                 
-                st.markdown("**📅 Selecciona las semanas a incluir en el reporte:**")
-                semanas_seleccionadas = st.multiselect(
-                    "Semanas disponibles:", 
-                    options=listado_hojas, 
-                    default=listado_hojas 
-                )
+                if col_m:
+                    col_matricula = col_m[0]
+                    for _, row in df_alumnos.iterrows():
+                        mat = str(row[col_matricula]).replace('.0', '').strip()
+                        if mat and mat != 'NAN':
+                            pat = str(row.get('PATERNO', '')).strip()
+                            mat_ape = str(row.get('MATERNO', '')).strip()
+                            nom = str(row.get('NOMBRE', '')).strip()
+                            
+                            pat = "" if pat == "NAN" else pat
+                            mat_ape = "" if mat_ape == "NAN" else mat_ape
+                            nom = "" if nom == "NAN" else nom
+                            
+                            nombre_completo = f"{pat} {mat_ape} {nom}".strip()
+                            if nombre_completo:
+                                diccionario_alumnos[nombre_completo] = mat
                 
-                if st.button("🚀 GENERAR REPORTE ESPECIALIZADO"):
-                    if mat_hist.strip() == "":
-                        st.warning("⚠️ Por favor, asegúrate de que haya un alumno seleccionado.")
-                    elif len(semanas_seleccionadas) == 0:
-                        st.warning("⚠️ Por favor, selecciona al menos una semana.")
+                nombres_ordenados = sorted(diccionario_alumnos.keys())
+                tab1, tab2 = st.tabs(["👥 Reporte Grupal", "👤 Reporte Histórico / Especializado"])
+                
+                with tab1:
+                    sem_m = st.selectbox("Semana para reporte grupal:", hojas_maestro)
+                    if st.button("🚀 GENERAR PDF GRUPAL"):
+                        with st.spinner("Generando..."):
+                            df_m = cargar_datos(sid_maestro, sem_m)
+                            pdf_m = FPDF()
+                            for _, f in df_m.iterrows(): 
+                                crear_hoja_alumno_pdf(pdf_m, f.to_dict(), trim_maestro, sem_m, es_grupal=True)
+                            
+                            res_pdf = pdf_m.output(dest='S')
+                            pdf_bytes = res_pdf.encode('latin-1') if isinstance(res_pdf, str) else bytes(res_pdf)
+                            
+                            st.download_button(label=f"📥 Descargar {sem_m}", data=pdf_bytes, file_name=f"Grupo_6B_{trim_maestro}_{sem_m}.pdf", mime="application/pdf")
+                            registrar_en_bitacora("MAESTRO", NOMBRE_MAESTRO, f"{trim_maestro} | {sem_m}", "Descarga Masiva")
+                
+                with tab2:
+                    if nombres_ordenados:
+                        alumno_seleccionado = st.selectbox("🧑‍🎓 Selecciona al alumno:", nombres_ordenados)
+                        mat_hist = diccionario_alumnos[alumno_seleccionado]
                     else:
-                        with st.spinner("Buscando y generando reporte..."):
-                            pdf_hist = FPDF()
-                            hubo_datos = False
-                            nombre_alumno_hist = ""
-                            
-                            for sem in semanas_seleccionadas:
-                                df_h = cargar_datos(sem)
-                                df_h.columns = [str(c).strip() for c in df_h.columns]
-                                col_m_hist = [c for c in df_h.columns if "MATRICULA" in c.upper()]
+                        st.warning("No se pudo cargar la lista de alumnos automáticamente.")
+                        mat_hist = st.text_input("Ingresa la matrícula del alumno a buscar:")
+                    
+                    st.markdown("**📅 Selecciona las semanas a incluir en el reporte:**")
+                    semanas_seleccionadas = st.multiselect(
+                        "Semanas disponibles:", 
+                        options=hojas_maestro, 
+                        default=hojas_maestro 
+                    )
+                    
+                    if st.button("🚀 GENERAR REPORTE ESPECIALIZADO"):
+                        if mat_hist.strip() == "":
+                            st.warning("⚠️ Por favor, asegúrate de que haya un alumno seleccionado.")
+                        elif len(semanas_seleccionadas) == 0:
+                            st.warning("⚠️ Por favor, selecciona al menos una semana.")
+                        else:
+                            with st.spinner("Buscando y generando reporte..."):
+                                pdf_hist = FPDF()
+                                hubo_datos = False
+                                nombre_alumno_hist = ""
                                 
-                                if col_m_hist:
-                                    df_h['BUSCAR'] = df_h[col_m_hist[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
-                                    fila = df_h[df_h['BUSCAR'] == mat_hist.strip()]
+                                for sem in semanas_seleccionadas:
+                                    df_h = cargar_datos(sid_maestro, sem)
+                                    df_h.columns = [str(c).strip() for c in df_h.columns]
+                                    col_m_hist = [c for c in df_h.columns if "MATRICULA" in c.upper()]
                                     
-                                    if not fila.empty:
-                                        hubo_datos = True
-                                        datos_al = fila.iloc[0].to_dict()
-                                        if nombre_alumno_hist == "":
-                                            nombre_alumno_hist = f"{datos_al.get('PATERNO', '')}_{datos_al.get('NOMBRE', '')}".strip()
-                                        crear_hoja_alumno_pdf(pdf_hist, datos_al, sem, es_grupal=False)
-                            
-                            if hubo_datos:
-                                pdf_bytes_hist = bytes(pdf_hist.output())
-                                st.download_button(
-                                    label=f"📥 Descargar Reporte de {nombre_alumno_hist}", 
-                                    data=pdf_bytes_hist, 
-                                    file_name=f"Reporte_Especializado_{nombre_alumno_hist}.pdf", 
-                                    mime="application/pdf"
-                                )
-                                registrar_en_bitacora("MAESTRO", NOMBRE_MAESTRO, "ESPECIALIZADO", f"Descarga {mat_hist}")
-                            else:
-                                st.error("❌ Alumno no encontrado en las semanas seleccionadas.")
+                                    if col_m_hist:
+                                        df_h['BUSCAR'] = df_h[col_m_hist[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
+                                        fila = df_h[df_h['BUSCAR'] == mat_hist.strip()]
+                                        
+                                        if not fila.empty:
+                                            hubo_datos = True
+                                            datos_al = fila.iloc[0].to_dict()
+                                            if nombre_alumno_hist == "":
+                                                nombre_alumno_hist = f"{datos_al.get('PATERNO', '')}_{datos_al.get('NOMBRE', '')}".strip()
+                                            crear_hoja_alumno_pdf(pdf_hist, datos_al, trim_maestro, sem, es_grupal=False)
+                                
+                                if hubo_datos:
+                                    res_pdf_h = pdf_hist.output(dest='S')
+                                    pdf_bytes_hist = res_pdf_h.encode('latin-1') if isinstance(res_pdf_h, str) else bytes(res_pdf_h)
+                                    
+                                    st.download_button(
+                                        label=f"📥 Descargar Reporte de {nombre_alumno_hist}", 
+                                        data=pdf_bytes_hist, 
+                                        file_name=f"Reporte_{trim_maestro}_{nombre_alumno_hist}.pdf", 
+                                        mime="application/pdf"
+                                    )
+                                    registrar_en_bitacora("MAESTRO", NOMBRE_MAESTRO, f"{trim_maestro} | ESPECIALIZADO", f"Descarga {mat_hist}")
+                                else:
+                                    st.error("❌ Alumno no encontrado en las semanas seleccionadas.")
 
 elif st.session_state.pantalla == 'matricula':
-    st.markdown(f"<h4 style='text-align: center;'>📍 {st.session_state.semana_activa}</h4>", unsafe_allow_html=True)
+    st.markdown(f"<h4 style='text-align: center;'>📚 {st.session_state.trimestre_activa} — 📍 {st.session_state.semana_activa}</h4>", unsafe_allow_html=True)
     mat_in = st.text_input("Matrícula:", value=st.session_state.get('ID_USUARIO', ""))
     if st.button("🔍 VER REPORTE"):
         st.session_state.ID_USUARIO = mat_in.strip()
-        df = cargar_datos(st.session_state.semana_activa)
+        sid_actual = TRIMESTRES[st.session_state.trimestre_activa]
+        df = cargar_datos(sid_actual, st.session_state.semana_activa)
         df.columns = [str(c).strip() for c in df.columns]
         col_m = [c for c in df.columns if "MATRICULA" in c.upper()]
         if col_m:
@@ -303,7 +326,7 @@ elif st.session_state.pantalla == 'matricula':
             fila = df[df['BUSCAR'] == st.session_state.ID_USUARIO]
             if not fila.empty:
                 st.session_state.alumno_datos = fila.iloc[0].to_dict()
-                registrar_en_bitacora(st.session_state.ID_USUARIO, st.session_state.alumno_datos.get('NOMBRE',''), st.session_state.semana_activa, "Ingreso")
+                registrar_en_bitacora(st.session_state.ID_USUARIO, st.session_state.alumno_datos.get('NOMBRE',''), f"{st.session_state.trimestre_activa} | {st.session_state.semana_activa}", "Ingreso")
                 st.session_state.pantalla = 'resultados'; st.rerun()
             else: st.error("❌ Matrícula no encontrada")
     if st.button("⬅️ VOLVER"): st.session_state.pantalla = 'inicio'; st.rerun()
@@ -311,20 +334,49 @@ elif st.session_state.pantalla == 'matricula':
 elif st.session_state.pantalla == 'resultados':
     datos = st.session_state.alumno_datos
     nombre_c = f"{datos.get('NOMBRE', '')} {datos.get('PATERNO', '')}"
-    st.markdown(f'<div class="banner-maestro"><h3>Bienvenido(a):</h3><h2>{nombre_c}</h2><p>Matrícula: {st.session_state.ID_USUARIO}</p></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="banner-maestro"><h3>Bienvenido(a):</h3><h2>{nombre_c}</h2><p>Matrícula: {st.session_state.ID_USUARIO} | {st.session_state.trimestre_activa}</p></div>', unsafe_allow_html=True)
     
-    idx_s = listado_hojas.index(st.session_state.semana_activa)
-    nueva_s = st.selectbox("📅 **Ver otra semana:**", listado_hojas, index=idx_s)
-    if nueva_s != st.session_state.semana_activa:
-        st.session_state.semana_activa = nueva_s
-        df_n = cargar_datos(nueva_s); df_n.columns = [str(c).strip() for c in df_n.columns]
-        col_m = [c for c in df_n.columns if "MATRICULA" in c.upper()]
-        df_n['BUSCAR'] = df_n[col_m[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
-        fila = df_n[df_n['BUSCAR'] == st.session_state.ID_USUARIO]
-        if not fila.empty:
-            st.session_state.alumno_datos = fila.iloc[0].to_dict()
-            registrar_en_bitacora(st.session_state.ID_USUARIO, nombre_c, nueva_s, "Cambio Semana")
-            st.rerun()
+    c_trim, c_sem = st.columns(2)
+    with c_trim:
+        idx_t = nombres_trimestres.index(st.session_state.trimestre_activa)
+        nuevo_t = st.selectbox("📚 **Cambiar Trimestre:**", nombres_trimestres, index=idx_t)
+    
+    sid_activo = TRIMESTRES[nuevo_t]
+    hojas_activas = obtener_nombres_hojas(sid_activo)
+
+    if nuevo_t != st.session_state.trimestre_activa:
+        if not hojas_activas:
+            st.warning(f"⚠️ No se pudieron cargar las hojas de {nuevo_t}.")
+        else:
+            st.session_state.trimestre_activa = nuevo_t
+            st.session_state.semana_activa = hojas_activas[0]
+            df_n = cargar_datos(sid_activo, st.session_state.semana_activa)
+            df_n.columns = [str(c).strip() for c in df_n.columns]
+            col_m = [c for c in df_n.columns if "MATRICULA" in c.upper()]
+            df_n['BUSCAR'] = df_n[col_m[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
+            fila = df_n[df_n['BUSCAR'] == st.session_state.ID_USUARIO]
+            if not fila.empty:
+                st.session_state.alumno_datos = fila.iloc[0].to_dict()
+                registrar_en_bitacora(st.session_state.ID_USUARIO, nombre_c, f"{nuevo_t} | {st.session_state.semana_activa}", "Cambio Trimestre")
+                st.rerun()
+            else:
+                st.error(f"❌ Matrícula no encontrada en {nuevo_t}.")
+
+    with c_sem:
+        if hojas_activas:
+            idx_s = hojas_activas.index(st.session_state.semana_activa) if st.session_state.semana_activa in hojas_activas else 0
+            nueva_s = st.selectbox("📅 **Ver otra semana:**", hojas_activas, index=idx_s)
+            if nueva_s != st.session_state.semana_activa:
+                st.session_state.semana_activa = nueva_s
+                df_n = cargar_datos(sid_activo, nueva_s)
+                df_n.columns = [str(c).strip() for c in df_n.columns]
+                col_m = [c for c in df_n.columns if "MATRICULA" in c.upper()]
+                df_n['BUSCAR'] = df_n[col_m[0]].astype(str).str.replace('.0', '', regex=False).str.strip()
+                fila = df_n[df_n['BUSCAR'] == st.session_state.ID_USUARIO]
+                if not fila.empty:
+                    st.session_state.alumno_datos = fila.iloc[0].to_dict()
+                    registrar_en_bitacora(st.session_state.ID_USUARIO, nombre_c, f"{st.session_state.trimestre_activa} | {nueva_s}", "Cambio Semana")
+                    st.rerun()
 
     res_f = {k: v for k, v in datos.items() if k.upper() not in ['NOMBRE', 'PATERNO', 'MATERNO', 'MATRICULA', 'BUSCAR', 'ALUMNO_COMPLETO']}
     entregas = sum(1 for v in res_f.values() if str(v).strip() not in ['0', '0.0', 'nan', '', 'False'])
@@ -340,8 +392,12 @@ elif st.session_state.pantalla == 'resultados':
     c1, c2 = st.columns(2)
     with c1:
         pdf_ind = FPDF()
-        crear_hoja_alumno_pdf(pdf_ind, datos, st.session_state.semana_activa)
-        st.download_button(f"📥 PDF", data=bytes(pdf_ind.output()), file_name=f"Reporte_{datos.get('PATERNO','')}.pdf")
+        crear_hoja_alumno_pdf(pdf_ind, datos, st.session_state.trimestre_activa, st.session_state.semana_activa)
+        
+        res_pdf_i = pdf_ind.output(dest='S')
+        pdf_bytes_ind = res_pdf_i.encode('latin-1') if isinstance(res_pdf_i, str) else bytes(res_pdf_i)
+        
+        st.download_button(f"📥 PDF", data=pdf_bytes_ind, file_name=f"Reporte_{st.session_state.trimestre_activa}_{datos.get('PATERNO','')}.pdf")
     with c2:
         if st.button("👥 SALIR"): st.session_state.pantalla = 'inicio'; st.rerun()
 
