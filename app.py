@@ -10,24 +10,24 @@ import time
 # =====================================================================
 # ⚙️ 1. BLOQUE DE CONFIGURACIÓN
 # =====================================================================
-st.set_page_config(page_title='Portal Escolar 6° "B" Urb. 690', layout="centered")
+st.set_page_config(page_title='Portal Escolar 6° "B" Urb. 1115', layout="centered")
 
 NOMBRE_MAESTRO = "Mtro. Francisco González"
-PASS_MAESTRO = st.secrets.get("PASS_MAESTRO", "6B2627")
+PASS_MAESTRO = st.secrets.get("PASS_MAESTRO", "52627")
 
 # 📚 Bases de datos por Trimestre (Mtro. Francisco González - 6° "B")
 TRIMESTRES = {
-    "1er Trimestre": st.secrets.get("SHEET_ID_T1", "2PACX-1vRxU9rDuWZHBBJkJltSqm0rDiRiT0wX6gBxXlY_IULzuY5X7OP5a0JvSzn9op1yhcCZL6torxhtJyeD"),
+    "1er Trimestre": st.secrets.get("SHEET_ID_T1", "1-WhenbF_94yLK556stoWxLlKBpmP88UTfYip5BaygFM"),
     "2do Trimestre": st.secrets.get("SHEET_ID_T2", "2PACX-1vRI3MfceVBH1QYcFYj7TULCWo5kXMlyk_5XvlI-JKVBFuuno6B-wpdpOXpvyMaP13dxlrt5vXHFOPS0"),
     "3er Trimestre": st.secrets.get("SHEET_ID_T3", "2PACX-1vTvMUqU6TddwSi8zWkvYwegH5UpEV8SdPw6xp8nQET8AtZIrZFzfNrNjGrOThVzM7QhfLTllx1U1UTa"),
 }
 
-# 📝 URL de la Bitácora
-URL_LOG_SCRIPT = st.secrets.get("URL_LOG_SCRIPT", "https://script.google.com/macros/s/AKfycbwo4om2BBTb3dgDAj4uf1bIXkSiE1wJxpWhrevqmKMvevRJHmKh7uDWtI2yuaiCc9Ra/exec")
+# 📝 URL de la Bitácora (Restaurada)
+URL_LOG_SCRIPT = st.secrets.get("URL_LOG_SCRIPT", "https://script.google.com/macros/s/AKfycbwNGbSsky_dCyzvhf0WGfWj0mJMxR74Jrz2jmpIkJYLUDsH07cTCQjgbKO2E-TlaN_G/exec")
 
-# 🎨 Enlaces de imágenes en GitHub
-URL_ESCUDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-felipe_gonzalez/52819c17985cf4ea867bfe8741a9272d61e1fbd4/WhatsApp%20Image%202026-07-17%20at%2014.37.28.jpeg"
-URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-felipe_gonzalez/a14b8851f0aa4863b5d7d992d18a9e34c85acd9d/bosque-con-vegetacion-de-tonos-violetas-y-lavanda-ruinas-de-wyveria-de-monster-hunter-wilds_3840x2160_xtrafondos.com.jpg"
+# 🎨 Enlaces de imágenes en GitHub (portal-escolar-6b)
+URL_ESCUDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/ESCUDO%20690%20(1).png"
+URL_FONDO = "https://raw.githubusercontent.com/franciscogonzalezsjalisco/portal-escolar-6b/main/6b.png"
 
 # =====================================================================
 
